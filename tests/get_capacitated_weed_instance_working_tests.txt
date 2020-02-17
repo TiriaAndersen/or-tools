@@ -1,0 +1,178 @@
+Trying to solve the BOPMid instance (500+ customers) with distance matrix, minimizing total distances with capacity constraint.
+This is  a log of command line inputs and outputs.
+Each subsequent program is a duplicate of the previous, with some changes.
+
+Note that (n17) includes the depot; that is, there are 16 customers and 1 depot. The same system for the rest.
+
+Example program (n17) with capacity constraints works. (https://developers.google.com/optimization/routing/cvrp)
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/capacitated_example_routing.cc
+I0217 15:22:05.750175  2176 example_routing_capacity.cc:64] Route for Vehicle 0:
+I0217 15:22:05.754173  2176 example_routing_capacity.cc:77] 0 Load(0) -> 1 Load(1) -> 4 Load(5) -> 3 Load(7) -> 15 Load(15) -> 0
+I0217 15:22:05.756173  2176 example_routing_capacity.cc:78] Distance of the route: 2192m
+I0217 15:22:05.757174  2176 example_routing_capacity.cc:79] Load of the route: 15
+I0217 15:22:05.758173  2176 example_routing_capacity.cc:64] Route for Vehicle 1:
+I0217 15:22:05.759172  2176 example_routing_capacity.cc:77] 0 Load(0) -> 14 Load(4) -> 16 Load(12) -> 10 Load(14) -> 2 Load(15) -> 0
+I0217 15:22:05.760174  2176 example_routing_capacity.cc:78] Distance of the route: 2192m
+I0217 15:22:05.761173  2176 example_routing_capacity.cc:79] Load of the route: 15
+I0217 15:22:05.761173  2176 example_routing_capacity.cc:64] Route for Vehicle 2:
+I0217 15:22:05.764173  2176 example_routing_capacity.cc:77] 0 Load(0) -> 7 Load(8) -> 13 Load(12) -> 12 Load(14) -> 11 Load(15) -> 0
+I0217 15:22:05.768173  2176 example_routing_capacity.cc:78] Distance of the route: 1324m
+I0217 15:22:05.769173  2176 example_routing_capacity.cc:79] Load of the route: 15
+I0217 15:22:05.769173  2176 example_routing_capacity.cc:64] Route for Vehicle 3:
+I0217 15:22:05.770172  2176 example_routing_capacity.cc:77] 0 Load(0) -> 9 Load(1) -> 8 Load(9) -> 6 Load(13) -> 5 Load(15) -> 0
+I0217 15:22:05.771173  2176 example_routing_capacity.cc:78] Distance of the route: 1164m
+I0217 15:22:05.772172  2176 example_routing_capacity.cc:79] Load of the route: 15
+I0217 15:22:05.773172  2176 example_routing_capacity.cc:83] Total distance of all routes: 6872m
+I0217 15:22:05.774173  2176 example_routing_capacity.cc:84] Total load of all routes: 60
+I0217 15:22:05.774173  2176 example_routing_capacity.cc:85]
+I0217 15:22:05.776175  2176 example_routing_capacity.cc:86] Advanced usage:
+I0217 15:22:05.781172  2176 example_routing_capacity.cc:87] Problem solved in 34ms
+
+Weed instance (n18) with capacity constraints, uniform 1 unit demand, 5 capacity vehicles works.
+const std::vector<int64> demands{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+const std::vector<int64> vehicle_capacities{5, 5, 5, 5};
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Weed_instance_n18.cc
+I0217 16:12:24.489161 13660 Capacitated_Weed_instance_n18.cc:47] Route for Vehicle 0:
+I0217 16:12:24.492161 13660 Capacitated_Weed_instance_n18.cc:60] 0 Load(0) -> 13 Load(1) -> 12 Load(2) -> 11 Load(3) -> 10 Load(4) -> 9 Load(5) -> 0
+I0217 16:12:24.494165 13660 Capacitated_Weed_instance_n18.cc:62] Distance of the route: 14428m
+I0217 16:12:24.494165 13660 Capacitated_Weed_instance_n18.cc:63] Load of the route: 5
+I0217 16:12:24.495163 13660 Capacitated_Weed_instance_n18.cc:47] Route for Vehicle 1:
+I0217 16:12:24.496167 13660 Capacitated_Weed_instance_n18.cc:60] 0 Load(0) -> 3 Load(1) -> 16 Load(2) -> 17 Load(3) -> 15 Load(4) -> 14 Load(5) -> 0
+I0217 16:12:24.497161 13660 Capacitated_Weed_instance_n18.cc:62] Distance of the route: 12316m
+I0217 16:12:24.497161 13660 Capacitated_Weed_instance_n18.cc:63] Load of the route: 5
+I0217 16:12:24.498162 13660 Capacitated_Weed_instance_n18.cc:47] Route for Vehicle 2:
+I0217 16:12:24.499164 13660 Capacitated_Weed_instance_n18.cc:60] 0 Load(0) -> 5 Load(1) -> 4 Load(2) -> 7 Load(3) -> 6 Load(4) -> 8 Load(5) -> 0
+I0217 16:12:24.500164 13660 Capacitated_Weed_instance_n18.cc:62] Distance of the route: 9404m
+I0217 16:12:24.504245 13660 Capacitated_Weed_instance_n18.cc:63] Load of the route: 5
+I0217 16:12:24.505162 13660 Capacitated_Weed_instance_n18.cc:47] Route for Vehicle 3:
+I0217 16:12:24.506165 13660 Capacitated_Weed_instance_n18.cc:60] 0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 0
+I0217 16:12:24.506165 13660 Capacitated_Weed_instance_n18.cc:62] Distance of the route: 3210m
+I0217 16:12:24.507161 13660 Capacitated_Weed_instance_n18.cc:63] Load of the route: 2
+I0217 16:12:24.508162 13660 Capacitated_Weed_instance_n18.cc:67] Total distance of all routes: 39358m
+I0217 16:12:24.509161 13660 Capacitated_Weed_instance_n18.cc:68] Total load of all routes: 17
+I0217 16:12:24.509161 13660 Capacitated_Weed_instance_n18.cc:69]
+I0217 16:12:24.510165 13660 Capacitated_Weed_instance_n18.cc:70] Advanced usage:
+I0217 16:12:24.511162 13660 Capacitated_Weed_instance_n18.cc:71] Problem solved in 29ms
+
+Weed instance (n50) with capacity constraints, uniform 1 unit demand, 13 capacity vehicles, works.
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Weed_instance_n50.cc
+I0217 16:20:15.133621 27936 Capacitated_Weed_instance_n50.cc:79] Route for Vehicle 0:
+I0217 16:20:15.136688 27936 Capacitated_Weed_instance_n50.cc:92] 0 Load(0) -> 45 Load(1) -> 44 Load(2) -> 42 Load(3) -> 43 Load(4) -> 39 Load(5) -> 40 Load(6) -> 41 Load(7) -> 34 Load(8) -> 31 Load(9) -> 33 Load(10) -> 32 Load(11) -> 30 Load(12) -> 19 Load(13) -> 0
+I0217 16:20:15.137622 27936 Capacitated_Weed_instance_n50.cc:93] Distance of the route: 1450771m
+I0217 16:20:15.139626 27936 Capacitated_Weed_instance_n50.cc:94] Load of the route: 13
+I0217 16:20:15.139626 27936 Capacitated_Weed_instance_n50.cc:79] Route for Vehicle 1:
+I0217 16:20:15.140626 27936 Capacitated_Weed_instance_n50.cc:92] 0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 49 Load(3) -> 38 Load(4) -> 47 Load(5) -> 48 Load(6) -> 46 Load(7) -> 37 Load(8) -> 36 Load(9) -> 35 Load(10) -> 3 Load(11) -> 0
+I0217 16:20:15.141623 27936 Capacitated_Weed_instance_n50.cc:93] Distance of the route: 1457628m
+I0217 16:20:15.142621 27936 Capacitated_Weed_instance_n50.cc:94] Load of the route: 11
+I0217 16:20:15.143620 27936 Capacitated_Weed_instance_n50.cc:79] Route for Vehicle 2:
+I0217 16:20:15.143620 27936 Capacitated_Weed_instance_n50.cc:92] 0 Load(0) -> 8 Load(1) -> 6 Load(2) -> 5 Load(3) -> 7 Load(4) -> 4 Load(5) -> 9 Load(6) -> 10 Load(7) -> 11 Load(8) -> 12 Load(9) -> 14 Load(10) -> 15 Load(11) -> 20 Load(12) -> 0
+I0217 16:20:15.144621 27936 Capacitated_Weed_instance_n50.cc:93] Distance of the route: 1644471m
+I0217 16:20:15.148622 27936 Capacitated_Weed_instance_n50.cc:94] Load of the route: 12
+I0217 16:20:15.150620 27936 Capacitated_Weed_instance_n50.cc:79] Route for Vehicle 3:
+I0217 16:20:15.151620 27936 Capacitated_Weed_instance_n50.cc:92] 0 Load(0) -> 13 Load(1) -> 22 Load(2) -> 21 Load(3) -> 25 Load(4) -> 24 Load(5) -> 23 Load(6) -> 27 Load(7) -> 26 Load(8) -> 28 Load(9) -> 29 Load(10) -> 18 Load(11) -> 17 Load(12) -> 16 Load(13) -> 0
+I0217 16:20:15.152621 27936 Capacitated_Weed_instance_n50.cc:93] Distance of the route: 1445474m
+I0217 16:20:15.153620 27936 Capacitated_Weed_instance_n50.cc:94] Load of the route: 13
+I0217 16:20:15.153620 27936 Capacitated_Weed_instance_n50.cc:98] Total distance of all routes: 5998344m
+I0217 16:20:15.154628 27936 Capacitated_Weed_instance_n50.cc:99] Total load of all routes: 49
+I0217 16:20:15.154628 27936 Capacitated_Weed_instance_n50.cc:100]
+I0217 16:20:15.155622 27936 Capacitated_Weed_instance_n50.cc:101] Advanced usage:
+I0217 16:20:15.156623 27936 Capacitated_Weed_instance_n50.cc:102] Problem solved in 123ms
+
+Weed instance (n100) with capacity constraints, uniform 1 unit demand, 25 capacity vehicles, works.
+I0217 16:28:35.440657 20132 Capacitated_Weed_instance_n100.cc:129] Route for Vehicle 0:
+I0217 16:28:35.444650 20132 Capacitated_Weed_instance_n100.cc:142] 0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 49 Load(3) -> 50 Load(4) -> 57 Load(5) -> 60 Load(6) -> 65 Load(7) -> 70 Load(8) -> 78 Load(9) -> 79 Load(10) -> 95 Load(11) -> 96 Load(12) -> 97 Load(13) -> 91 Load(14) -> 92 Load(15) -> 93 Load(16) -> 94 Load(17) -> 89 Load(18) -> 88 Load(19) -> 90 Load(20) -> 76 Load(21) -> 30 Load(22) -> 26 Load(23) -> 15 Load(24) -> 20 Load(25) -> 0
+I0217 16:28:35.445632 20132 Capacitated_Weed_instance_n100.cc:143] Distance of the route: 1741977m
+I0217 16:28:35.446630 20132 Capacitated_Weed_instance_n100.cc:144] Load of the route: 25
+I0217 16:28:35.447633 20132 Capacitated_Weed_instance_n100.cc:129] Route for Vehicle 1:
+I0217 16:28:35.448628 20132 Capacitated_Weed_instance_n100.cc:142] 0 Load(0) -> 5 Load(1) -> 6 Load(2) -> 7 Load(3) -> 4 Load(4) -> 13 Load(5) -> 14 Load(6) -> 27 Load(7) -> 32 Load(8) -> 72 Load(9) -> 67 Load(10) -> 66 Load(11) -> 33 Load(12) -> 31 Load(13) -> 28 Load(14) -> 29 Load(15) -> 34 Load(16) -> 41 Load(17) -> 40 Load(18) -> 35 Load(19) -> 36 Load(20) -> 37 Load(21) -> 17 Load(22) -> 18 Load(23) -> 19 Load(24) -> 16 Load(25) -> 0
+I0217 16:28:35.449630 20132 Capacitated_Weed_instance_n100.cc:143] Distance of the route: 1585178m
+I0217 16:28:35.450630 20132 Capacitated_Weed_instance_n100.cc:144] Load of the route: 25
+I0217 16:28:35.450630 20132 Capacitated_Weed_instance_n100.cc:129] Route for Vehicle 2:
+I0217 16:28:35.451628 20132 Capacitated_Weed_instance_n100.cc:142] 0 Load(0) -> 39 Load(1) -> 63 Load(2) -> 62 Load(3) -> 61 Load(4) -> 80 Load(5) -> 81 Load(6) -> 84 Load(7) -> 83 Load(8) -> 77 Load(9) -> 71 Load(10) -> 75 Load(11) -> 68 Load(12) -> 69 Load(13) -> 85 Load(14) -> 73 Load(15) -> 25 Load(16) -> 24 Load(17) -> 23 Load(18) -> 22 Load(19) -> 21 Load(20) -> 12 Load(21) -> 11 Load(22) -> 10 Load(23) -> 9 Load(24) -> 8 Load(25) -> 0
+I0217 16:28:35.453630 20132 Capacitated_Weed_instance_n100.cc:143] Distance of the route: 1750265m
+I0217 16:28:35.458636 20132 Capacitated_Weed_instance_n100.cc:144] Load of the route: 25
+I0217 16:28:35.459636 20132 Capacitated_Weed_instance_n100.cc:129] Route for Vehicle 3:
+I0217 16:28:35.460636 20132 Capacitated_Weed_instance_n100.cc:142] 0 Load(0) -> 3 Load(1) -> 99 Load(2) -> 74 Load(3) -> 98 Load(4) -> 48 Load(5) -> 47 Load(6) -> 46 Load(7) -> 45 Load(8) -> 44 Load(9) -> 42 Load(10) -> 43 Load(11) -> 55 Load(12) -> 64 Load(13) -> 87 Load(14) -> 82 Load(15) -> 86 Load(16) -> 59 Load(17) -> 58 Load(18) -> 56 Load(19) -> 53 Load(20) -> 52 Load(21) -> 51 Load(22) -> 54 Load(23) -> 38 Load(24) -> 0
+I0217 16:28:35.461635 20132 Capacitated_Weed_instance_n100.cc:143] Distance of the route: 818487m
+I0217 16:28:35.462637 20132 Capacitated_Weed_instance_n100.cc:144] Load of the route: 24
+I0217 16:28:35.463637 20132 Capacitated_Weed_instance_n100.cc:148] Total distance of all routes: 5895907m
+I0217 16:28:35.464637 20132 Capacitated_Weed_instance_n100.cc:149] Total load of all routes: 99
+I0217 16:28:35.464637 20132 Capacitated_Weed_instance_n100.cc:150]
+I0217 16:28:35.465636 20132 Capacitated_Weed_instance_n100.cc:151] Advanced usage:
+I0217 16:28:35.466629 20132 Capacitated_Weed_instance_n100.cc:152] Problem solved in 239ms
+
+Weed instance (n150) with capacity constraints, uniform 1 unit demand, 40 capacity vehicles, works.
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Weed_instance_n150.cc
+I0217 16:32:55.453009 18132 Capacitated_Weed_instance_n150.cc:179] Route for Vehicle 0:
+I0217 16:32:55.458011 18132 Capacitated_Weed_instance_n150.cc:192] 0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 49 Load(3) -> 50 Load(4) -> 57 Load(5) -> 60 Load(6) -> 77 Load(7) -> 73 Load(8) -> 78 Load(9) -> 83 Load(10) -> 84 Load(11) -> 104 Load(12) -> 105 Load(13) -> 101 Load(14) -> 102 Load(15) -> 115 Load(16) -> 112 Load(17) -> 113 Load(18) -> 114 Load(19) -> 141 Load(20) -> 142 Load(21) -> 143 Load(22) -> 147 Load(23) -> 149 Load(24) -> 148 Load(25) -> 146 Load(26) -> 144 Load(27) -> 145 Load(28) -> 103 Load(29) -> 111 Load(30) -> 110 Load(31) -> 100 Load(32) -> 97 Load(33) -> 96 Load(34) -> 95 Load(35) -> 79 Load(36) -> 129 Load(37) -> 29 Load(38) -> 18 Load(39) -> 16 Load(40) -> 0
+I0217 16:32:55.459012 18132 Capacitated_Weed_instance_n150.cc:193] Distance of the route: 2566537m
+I0217 16:32:55.461210 18132 Capacitated_Weed_instance_n150.cc:194] Load of the route: 40
+I0217 16:32:55.461210 18132 Capacitated_Weed_instance_n150.cc:179] Route for Vehicle 1:
+I0217 16:32:55.463292 18132 Capacitated_Weed_instance_n150.cc:192] 0 Load(0) -> 13 Load(1) -> 14 Load(2) -> 30 Load(3) -> 31 Load(4) -> 28 Load(5) -> 34 Load(6) -> 35 Load(7) -> 40 Load(8) -> 39 Load(9) -> 42 Load(10) -> 54 Load(11) -> 55 Load(12) -> 64 Load(13) -> 85 Load(14) -> 127 Load(15) -> 72 Load(16) -> 76 Load(17) -> 66 Load(18) -> 67 Load(19) -> 68 Load(20) -> 69 Load(21) -> 70 Load(22) -> 65 Load(23) -> 33 Load(24) -> 62 Load(25) -> 61 Load(26) -> 59 Load(27) -> 58 Load(28) -> 56 Load(29) -> 53 Load(30) -> 52 Load(31) -> 120 Load(32) -> 118 Load(33) -> 119 Load(34) -> 116 Load(35) -> 117 Load(36) -> 51 Load(37) -> 38 Load(38) -> 0
+I0217 16:32:55.464293 18132 Capacitated_Weed_instance_n150.cc:193] Distance of the route: 1595614m
+I0217 16:32:55.470297 18132 Capacitated_Weed_instance_n150.cc:194] Load of the route: 38
+I0217 16:32:55.471292 18132 Capacitated_Weed_instance_n150.cc:179] Route for Vehicle 2:
+I0217 16:32:55.472293 18132 Capacitated_Weed_instance_n150.cc:192] 0 Load(0) -> 8 Load(1) -> 6 Load(2) -> 5 Load(3) -> 7 Load(4) -> 4 Load(5) -> 9 Load(6) -> 10 Load(7) -> 11 Load(8) -> 12 Load(9) -> 21 Load(10) -> 22 Load(11) -> 24 Load(12) -> 23 Load(13) -> 27 Load(14) -> 26 Load(15) -> 15 Load(16) -> 20 Load(17) -> 19 Load(18) -> 17 Load(19) -> 99 Load(20) -> 123 Load(21) -> 121 Load(22) -> 122 Load(23) -> 124 Load(24) -> 74 Load(25) -> 41 Load(26) -> 98 Load(27) -> 36 Load(28) -> 37 Load(29) -> 46 Load(30) -> 47 Load(31) -> 48 Load(32) -> 45 Load(33) -> 0
+I0217 16:32:55.473294 18132 Capacitated_Weed_instance_n150.cc:193] Distance of the route: 1768756m
+I0217 16:32:55.474300 18132 Capacitated_Weed_instance_n150.cc:194] Load of the route: 33
+I0217 16:32:55.475292 18132 Capacitated_Weed_instance_n150.cc:179] Route for Vehicle 3:
+I0217 16:32:55.478608 18132 Capacitated_Weed_instance_n150.cc:192] 0 Load(0) -> 3 Load(1) -> 136 Load(2) -> 138 Load(3) -> 132 Load(4) -> 130 Load(5) -> 137 Load(6) -> 140 Load(7) -> 131 Load(8) -> 139 Load(9) -> 86 Load(10) -> 107 Load(11) -> 134 Load(12) -> 135 Load(13) -> 32 Load(14) -> 126 Load(15) -> 87 Load(16) -> 88 Load(17) -> 89 Load(18) -> 94 Load(19) -> 109 Load(20) -> 93 Load(21) -> 108 Load(22) -> 91 Load(23) -> 92 Load(24) -> 128 Load(25) -> 90 Load(26) -> 80 Load(27) -> 133 Load(28) -> 106 Load(29) -> 25 Load(30) -> 71 Load(31) -> 81 Load(32) -> 82 Load(33) -> 75 Load(34) -> 125 Load(35) -> 63 Load(36) -> 43 Load(37) -> 44 Load(38) -> 0
+I0217 16:32:55.484658 18132 Capacitated_Weed_instance_n150.cc:193] Distance of the route: 821918m
+I0217 16:32:55.485659 18132 Capacitated_Weed_instance_n150.cc:194] Load of the route: 38
+I0217 16:32:55.486658 18132 Capacitated_Weed_instance_n150.cc:198] Total distance of all routes: 6752825m
+I0217 16:32:55.487655 18132 Capacitated_Weed_instance_n150.cc:199] Total load of all routes: 149
+I0217 16:32:55.488656 18132 Capacitated_Weed_instance_n150.cc:200]
+I0217 16:32:55.488656 18132 Capacitated_Weed_instance_n150.cc:201] Advanced usage:
+I0217 16:32:55.489652 18132 Capacitated_Weed_instance_n150.cc:202] Problem solved in 332ms
+
+Weed instance (n200) with capacity constraints, uniform 1 unit demand, 50 capacity vehicles, works.
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Weed_instance_n200.cc
+I0217 16:36:56.755547 21856 Capacitated_Weed_instance_n200.cc:229] Route for Vehicle 0:
+I0217 16:36:56.759547 21856 Capacitated_Weed_instance_n200.cc:242] 0 Load(0) -> 49 Load(1) -> 50 Load(2) -> 65 Load(3) -> 78 Load(4) -> 79 Load(5) -> 95 Load(6) -> 96 Load(7) -> 97 Load(8) -> 100 Load(9) -> 110 Load(10) -> 111 Load(11) -> 113 Load(12) -> 143 Load(13) -> 169 Load(14) -> 144 Load(15) -> 145 Load(16) -> 165 Load(17) -> 161 Load(18) -> 167 Load(19) -> 150 Load(20) -> 168 Load(21) -> 163 Load(22) -> 162 Load(23) -> 166 Load(24) -> 185 Load(25) -> 186 Load(26) -> 187 Load(27) -> 189 Load(28) -> 190 Load(29) -> 188 Load(30) -> 177 Load(31) -> 182 Load(32) -> 183 Load(33) -> 175 Load(34) -> 180 Load(35) -> 179 Load(36) -> 178 Load(37) -> 181 Load(38) -> 176 Load(39) -> 173 Load(40) -> 92 Load(41) -> 91 Load(42) -> 108 Load(43) -> 93 Load(44) -> 109 Load(45) -> 94 Load(46) -> 89 Load(47) -> 88 Load(48) -> 90 Load(49) -> 129 Load(50) -> 0
+I0217 16:36:56.760545 21856 Capacitated_Weed_instance_n200.cc:243] Distance of the route: 4511746m
+I0217 16:36:56.761544 21856 Capacitated_Weed_instance_n200.cc:244] Load of the route: 50
+I0217 16:36:56.762547 21856 Capacitated_Weed_instance_n200.cc:229] Route for Vehicle 1:
+I0217 16:36:56.762547 21856 Capacitated_Weed_instance_n200.cc:242] 0 Load(0) -> 3 Load(1) -> 136 Load(2) -> 138 Load(3) -> 132 Load(4) -> 130 Load(5) -> 184 Load(6) -> 198 Load(7) -> 174 Load(8) -> 197 Load(9) -> 172 Load(10) -> 196 Load(11) -> 171 Load(12) -> 195 Load(13) -> 170 Load(14) -> 194 Load(15) -> 128 Load(16) -> 192 Load(17) -> 11 Load(18) -> 191 Load(19) -> 21 Load(20) -> 22 Load(21) -> 23 Load(22) -> 24 Load(23) -> 25 Load(24) -> 140 Load(25) -> 137 Load(26) -> 139 Load(27) -> 131 Load(28) -> 127 Load(29) -> 72 Load(30) -> 87 Load(31) -> 107 Load(32) -> 134 Load(33) -> 135 Load(34) -> 86 Load(35) -> 70 Load(36) -> 69 Load(37) -> 68 Load(38) -> 67 Load(39) -> 66 Load(40) -> 77 Load(41) -> 73 Load(42) -> 85 Load(43) -> 71 Load(44) -> 81 Load(45) -> 82 Load(46) -> 80 Load(47) -> 64 Load(48) -> 63 Load(49) -> 42 Load(50) -> 0
+I0217 16:36:56.763550 21856 Capacitated_Weed_instance_n200.cc:243] Distance of the route: 818990m
+I0217 16:36:56.764544 21856 Capacitated_Weed_instance_n200.cc:244] Load of the route: 50
+I0217 16:36:56.765545 21856 Capacitated_Weed_instance_n200.cc:229] Route for Vehicle 2:
+I0217 16:36:56.766548 21856 Capacitated_Weed_instance_n200.cc:242] 0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 38 Load(3) -> 54 Load(4) -> 51 Load(5) -> 117 Load(6) -> 116 Load(7) -> 119 Load(8) -> 118 Load(9) -> 120 Load(10) -> 52 Load(11) -> 53 Load(12) -> 56 Load(13) -> 58 Load(14) -> 59 Load(15) -> 61 Load(16) -> 62 Load(17) -> 55 Load(18) -> 43 Load(19) -> 39 Load(20) -> 47 Load(21) -> 48 Load(22) -> 44 Load(23) -> 45 Load(24) -> 46 Load(25) -> 37 Load(26) -> 36 Load(27) -> 40 Load(28) -> 41 Load(29) -> 74 Load(30) -> 124 Load(31) -> 122 Load(32) -> 99 Load(33) -> 17 Load(34) -> 19 Load(35) -> 20 Load(36) -> 15 Load(37) -> 14 Load(38) -> 13 Load(39) -> 12 Load(40) -> 199 Load(41) -> 10 Load(42) -> 9 Load(43) -> 4 Load(44) -> 193 Load(45) -> 7 Load(46) -> 5 Load(47) -> 6 Load(48) -> 8 Load(49) -> 0
+I0217 16:36:56.770548 21856 Capacitated_Weed_instance_n200.cc:243] Distance of the route: 1898452m
+I0217 16:36:56.771545 21856 Capacitated_Weed_instance_n200.cc:244] Load of the route: 49
+I0217 16:36:56.772544 21856 Capacitated_Weed_instance_n200.cc:229] Route for Vehicle 3:
+I0217 16:36:56.773545 21856 Capacitated_Weed_instance_n200.cc:242] 0 Load(0) -> 16 Load(1) -> 18 Load(2) -> 29 Load(3) -> 26 Load(4) -> 27 Load(5) -> 30 Load(6) -> 31 Load(7) -> 28 Load(8) -> 34 Load(9) -> 35 Load(10) -> 98 Load(11) -> 121 Load(12) -> 123 Load(13) -> 125 Load(14) -> 76 Load(15) -> 133 Load(16) -> 104 Load(17) -> 105 Load(18) -> 101 Load(19) -> 103 Load(20) -> 159 Load(21) -> 158 Load(22) -> 157 Load(23) -> 156 Load(24) -> 155 Load(25) -> 154 Load(26) -> 153 Load(27) -> 160 Load(28) -> 146 Load(29) -> 151 Load(30) -> 152 Load(31) -> 148 Load(32) -> 149 Load(33) -> 147 Load(34) -> 164 Load(35) -> 142 Load(36) -> 141 Load(37) -> 114 Load(38) -> 112 Load(39) -> 115 Load(40) -> 102 Load(41) -> 84 Load(42) -> 83 Load(43) -> 33 Load(44) -> 126 Load(45) -> 75 Load(46) -> 106 Load(47) -> 32 Load(48) -> 60 Load(49) -> 57 Load(50) -> 0
+I0217 16:36:56.774546 21856 Capacitated_Weed_instance_n200.cc:243] Distance of the route: 2590237m
+I0217 16:36:56.775548 21856 Capacitated_Weed_instance_n200.cc:244] Load of the route: 50
+I0217 16:36:56.776548 21856 Capacitated_Weed_instance_n200.cc:248] Total distance of all routes: 9819425m
+I0217 16:36:56.777547 21856 Capacitated_Weed_instance_n200.cc:249] Total load of all routes: 199
+I0217 16:36:56.778544 21856 Capacitated_Weed_instance_n200.cc:250]
+I0217 16:36:56.779544 21856 Capacitated_Weed_instance_n200.cc:251] Advanced usage:
+I0217 16:36:56.784548 21856 Capacitated_Weed_instance_n200.cc:252] Problem solved in 452ms
+
+Weed instance (n300) with capacity constraints, uniform 1 unit demand, 75 capacity vehicles, works.
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Weed_instance_n300.cc
+I0217 16:40:50.019390 27948 Capacitated_Weed_instance_n300.cc:329] Route for Vehicle 0:
+I0217 16:40:50.023403 27948 Capacitated_Weed_instance_n300.cc:342] 0 Load(0) -> 5 Load(1) -> 241 Load(2) -> 9 Load(3) -> 238 Load(4) -> 237 Load(5) -> 8 Load(6) -> 236 Load(7) -> 235 Load(8) -> 233 Load(9) -> 234 Load(10) -> 240 Load(11) -> 248 Load(12) -> 232 Load(13) -> 231 Load(14) -> 12 Load(15) -> 197 Load(16) -> 185 Load(17) -> 187 Load(18) -> 189 Load(19) -> 190 Load(20) -> 191 Load(21) -> 21 Load(22) -> 199 Load(23) -> 198 Load(24) -> 200 Load(25) -> 196 Load(26) -> 192 Load(27) -> 10 Load(28) -> 194 Load(29) -> 193 Load(30) -> 195 Load(31) -> 4 Load(32) -> 230 Load(33) -> 7 Load(34) -> 228 Load(35) -> 6 Load(36) -> 227 Load(37) -> 229 Load(38) -> 225 Load(39) -> 221 Load(40) -> 217 Load(41) -> 97 Load(42) -> 91 Load(43) -> 108 Load(44) -> 92 Load(45) -> 109 Load(46) -> 93 Load(47) -> 90 Load(48) -> 94 Load(49) -> 89 Load(50) -> 88 Load(51) -> 24 Load(52) -> 23 Load(53) -> 22 Load(54) -> 13 Load(55) -> 14 Load(56) -> 15 Load(57) -> 20 Load(58) -> 19 Load(59) -> 16 Load(60) -> 17 Load(61) -> 18 Load(62) -> 35 Load(63) -> 34 Load(64) -> 29 Load(65) -> 26 Load(66) -> 27 Load(67) -> 30 Load(68) -> 28 Load(69) -> 31 Load(70) -> 129 Load(71) -> 131 Load(72) -> 135 Load(73) -> 137 Load(74) -> 216 Load(75) -> 0
+I0217 16:40:50.024410 27948 Capacitated_Weed_instance_n300.cc:343] Distance of the route: 1800732m
+I0217 16:40:50.025367 27948 Capacitated_Weed_instance_n300.cc:344] Load of the route: 75
+I0217 16:40:50.026396 27948 Capacitated_Weed_instance_n300.cc:329] Route for Vehicle 1:
+I0217 16:40:50.027369 27948 Capacitated_Weed_instance_n300.cc:342] 0 Load(0) -> 2 Load(1) -> 266 Load(2) -> 265 Load(3) -> 264 Load(4) -> 262 Load(5) -> 260 Load(6) -> 272 Load(7) -> 263 Load(8) -> 261 Load(9) -> 275 Load(10) -> 273 Load(11) -> 274 Load(12) -> 286 Load(13) -> 296 Load(14) -> 284 Load(15) -> 283 Load(16) -> 277 Load(17) -> 278 Load(18) -> 279 Load(19) -> 280 Load(20) -> 282 Load(21) -> 281 Load(22) -> 288 Load(23) -> 289 Load(24) -> 297 Load(25) -> 11 Load(26) -> 298 Load(27) -> 299 Load(28) -> 267 Load(29) -> 268 Load(30) -> 269 Load(31) -> 256 Load(32) -> 257 Load(33) -> 258 Load(34) -> 259 Load(35) -> 255 Load(36) -> 139 Load(37) -> 86 Load(38) -> 106 Load(39) -> 75 Load(40) -> 73 Load(41) -> 76 Load(42) -> 126 Load(43) -> 78 Load(44) -> 107 Load(45) -> 134 Load(46) -> 133 Load(47) -> 104 Load(48) -> 105 Load(49) -> 84 Load(50) -> 83 Load(51) -> 32 Load(52) -> 81 Load(53) -> 82 Load(54) -> 85 Load(55) -> 71 Load(56) -> 70 Load(57) -> 65 Load(58) -> 69 Load(59) -> 68 Load(60) -> 67 Load(61) -> 66 Load(62) -> 80 Load(63) -> 127 Load(64) -> 72 Load(65) -> 33 Load(66) -> 64 Load(67) -> 63 Load(68) -> 125 Load(69) -> 77 Load(70) -> 60 Load(71) -> 57 Load(72) -> 50 Load(73) -> 49 Load(74) -> 0
+I0217 16:40:50.028367 27948 Capacitated_Weed_instance_n300.cc:343] Distance of the route: 6926701m
+I0217 16:40:50.028367 27948 Capacitated_Weed_instance_n300.cc:344] Load of the route: 74
+I0217 16:40:50.029366 27948 Capacitated_Weed_instance_n300.cc:329] Route for Vehicle 2:
+I0217 16:40:50.030369 27948 Capacitated_Weed_instance_n300.cc:342] 0 Load(0) -> 293 Load(1) -> 292 Load(2) -> 291 Load(3) -> 290 Load(4) -> 276 Load(5) -> 294 Load(6) -> 295 Load(7) -> 270 Load(8) -> 285 Load(9) -> 271 Load(10) -> 287 Load(11) -> 1 Load(12) -> 212 Load(13) -> 213 Load(14) -> 204 Load(15) -> 205 Load(16) -> 211 Load(17) -> 210 Load(18) -> 209 Load(19) -> 208 Load(20) -> 207 Load(21) -> 206 Load(22) -> 141 Load(23) -> 142 Load(24) -> 164 Load(25) -> 143 Load(26) -> 169 Load(27) -> 144 Load(28) -> 145 Load(29) -> 103 Load(30) -> 159 Load(31) -> 158 Load(32) -> 157 Load(33) -> 156 Load(34) -> 155 Load(35) -> 154 Load(36) -> 153 Load(37) -> 160 Load(38) -> 146 Load(39) -> 151 Load(40) -> 152 Load(41) -> 147 Load(42) -> 148 Load(43) -> 149 Load(44) -> 167 Load(45) -> 150 Load(46) -> 168 Load(47) -> 163 Load(48) -> 162 Load(49) -> 161 Load(50) -> 165 Load(51) -> 166 Load(52) -> 254 Load(53) -> 140 Load(54) -> 87 Load(55) -> 62 Load(56) -> 61 Load(57) -> 59 Load(58) -> 58 Load(59) -> 56 Load(60) -> 53 Load(61) -> 52 Load(62) -> 120 Load(63) -> 118 Load(64) -> 119 Load(65) -> 116 Load(66) -> 117 Load(67) -> 51 Load(68) -> 54 Load(69) -> 55 Load(70) -> 43 Load(71) -> 42 Load(72) -> 38 Load(73) -> 45 Load(74) -> 249 Load(75) -> 0
+I0217 16:40:50.031368 27948 Capacitated_Weed_instance_n300.cc:343] Distance of the route: 2184937m
+I0217 16:40:50.039366 27948 Capacitated_Weed_instance_n300.cc:344] Load of the route: 75
+I0217 16:40:50.040369 27948 Capacitated_Weed_instance_n300.cc:329] Route for Vehicle 3:
+I0217 16:40:50.040369 27948 Capacitated_Weed_instance_n300.cc:342] 0 Load(0) -> 3 Load(1) -> 99 Load(2) -> 123 Load(3) -> 121 Load(4) -> 122 Load(5) -> 98 Load(6) -> 36 Load(7) -> 37 Load(8) -> 46 Load(9) -> 47 Load(10) -> 48 Load(11) -> 44 Load(12) -> 219 Load(13) -> 111 Load(14) -> 110 Load(15) -> 100 Load(16) -> 101 Load(17) -> 102 Load(18) -> 115 Load(19) -> 112 Load(20) -> 113 Load(21) -> 114 Load(22) -> 202 Load(23) -> 138 Load(24) -> 132 Load(25) -> 40 Load(26) -> 41 Load(27) -> 74 Load(28) -> 124 Load(29) -> 203 Load(30) -> 79 Load(31) -> 95 Load(32) -> 96 Load(33) -> 130 Load(34) -> 253 Load(35) -> 252 Load(36) -> 215 Load(37) -> 214 Load(38) -> 226 Load(39) -> 188 Load(40) -> 224 Load(41) -> 186 Load(42) -> 223 Load(43) -> 175 Load(44) -> 250 Load(45) -> 177 Load(46) -> 222 Load(47) -> 180 Load(48) -> 220 Load(49) -> 183 Load(50) -> 182 Load(51) -> 178 Load(52) -> 179 Load(53) -> 181 Load(54) -> 176 Load(55) -> 184 Load(56) -> 251 Load(57) -> 201 Load(58) -> 247 Load(59) -> 174 Load(60) -> 246 Load(61) -> 172 Load(62) -> 245 Load(63) -> 171 Load(64) -> 244 Load(65) -> 170 Load(66) -> 243 Load(67) -> 25 Load(68) -> 242 Load(69) -> 173 Load(70) -> 239 Load(71) -> 128 Load(72) -> 136 Load(73) -> 39 Load(74) -> 218 Load(75) -> 0
+I0217 16:40:50.041369 27948 Capacitated_Weed_instance_n300.cc:343] Distance of the route: 486768m
+I0217 16:40:50.042368 27948 Capacitated_Weed_instance_n300.cc:344] Load of the route: 75
+I0217 16:40:50.043367 27948 Capacitated_Weed_instance_n300.cc:348] Total distance of all routes: 11399138m
+I0217 16:40:50.044368 27948 Capacitated_Weed_instance_n300.cc:349] Total load of all routes: 299
+I0217 16:40:50.044368 27948 Capacitated_Weed_instance_n300.cc:350]
+I0217 16:40:50.045367 27948 Capacitated_Weed_instance_n300.cc:351] Advanced usage:
+I0217 16:40:50.046367 27948 Capacitated_Weed_instance_n300.cc:352] Problem solved in 1029ms
+
+Weed instance (n400) with capacity constraints, uniform 1 unit demand, 100 capacity vehicles.
+Compiled, Capacitated_Weed_instance_n400.exe stopped working, VS17 debug caught error.
+Unhandled exception at 0x00007FF790F472C8 in Capacitated_Weed_instance_n400.exe: 0xC00000FD: Stack overflow (parameters: 0x0000000000000001, 0x000000C518283000). occurred
