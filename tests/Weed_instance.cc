@@ -681,6 +681,7 @@ void PrintSolution(const DataModel& data, const RoutingIndexManager& manager,
                                                      int64{vehicle_id});
     }
     LOG(INFO) << route.str() << manager.IndexToNode(index).value();
+    route_distance = route_distance/100; //Distance matrix is scaled up by 100, so scale down here
     LOG(INFO) << "Distance of the route: " << route_distance << "m";
     max_route_distance = std::max(route_distance, max_route_distance);
   }
@@ -690,6 +691,7 @@ void PrintSolution(const DataModel& data, const RoutingIndexManager& manager,
 }
 
 void VrpGlobalSpan() {
+
   // Instantiate the data problem.
   DataModel data;
 
@@ -713,7 +715,7 @@ void VrpGlobalSpan() {
   routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index);
 
   // Add Distance constraint.
-  routing.AddDimension(transit_callback_index, 0, 3000000,
+  routing.AddDimension(transit_callback_index, 0, 300000000,
                        true,  // start cumul to zero
                        "Distance");
   routing.GetMutableDimension("Distance")->SetGlobalSpanCostCoefficient(100);
@@ -722,6 +724,7 @@ void VrpGlobalSpan() {
   RoutingSearchParameters searchParameters = DefaultRoutingSearchParameters();
   // searchParameters.set_local_search_metaheuristic(LocalSearchMetaheuristic::GUIDED_LOCAL_SEARCH);
   // searchParameters.mutable_time_limit()->set_seconds(30);
+  searchParameters.set_solution_limit(100);
   searchParameters.set_first_solution_strategy(FirstSolutionStrategy::PATH_CHEAPEST_ARC);
 
   // Solve the problem.

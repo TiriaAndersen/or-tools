@@ -478,7 +478,7 @@ void VrpGlobalSpan() {
   // Setting first solution heuristic.
   RoutingSearchParameters searchParameters = DefaultRoutingSearchParameters();
   //searchParameters.mutable_time_limit()->set_seconds(1);
-  searchParameters.set_solution_limit(1);
+  searchParameters.set_solution_limit(100);
   searchParameters.set_first_solution_strategy(FirstSolutionStrategy::PATH_CHEAPEST_ARC);
 
   // Solve the problem.
