@@ -1,0 +1,181 @@
+Trying to solve the BOPMid instance (500+ customers) with distance matrix, minimizing total distances with a demand capacity constraint + route distance constraint.
+This is  a log of command line inputs and outputs.
+Each subsequent program is a duplicate of the previous, with some changes.
+
+We begin with Capacitated_Weed_instance_n18.cc and modify to add a distance constriant.
+
+Weed instance (n18) with 10 vehicles, 5 demand capacity each, 10000000 (100,000m) distance capacity.
+routing.AddDimension(
+    transit_callback_index,    // transit callback index
+    int64{0},                 // null capacity slack
+    10000000,//data.vehicle_distance_capacities,  // vehicle maximum distance capacities
+    true,                     // start cumul to zero
+    "Distance");
+
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Fuel_Weed_instance_n18.cc
+ Route for Vehicle 0:
+ 0 Load(0) -> 0
+ Distance of the route: 0m
+ Load of the route: 0
+ Route for Vehicle 1:
+ 0 Load(0) -> 0
+ Distance of the route: 0m
+ Load of the route: 0
+ Route for Vehicle 2:
+ 0 Load(0) -> 0
+ Distance of the route: 0m
+ Load of the route: 0
+ Route for Vehicle 3:
+ 0 Load(0) -> 0
+ Distance of the route: 0m
+ Load of the route: 0
+ Route for Vehicle 4:
+ 0 Load(0) -> 0
+ Distance of the route: 0m
+ Load of the route: 0
+ Route for Vehicle 5:
+ 0 Load(0) -> 0
+ Distance of the route: 0m
+ Load of the route: 0
+ Route for Vehicle 6:
+0 Load(0) -> 13 Load(1) -> 12 Load(2) -> 11 Load(3) -> 10 Load(4) -> 9 Load(5) -> 0
+ Distance of the route: 14428m
+ Load of the route: 5
+ Route for Vehicle 7:
+ 0 Load(0) -> 3 Load(1) -> 16 Load(2) -> 17 Load(3) -> 15 Load(4) -> 14 Load(5) -> 0
+ Distance of the route: 12316m
+ Load of the route: 5
+ Route for Vehicle 8:
+ 0 Load(0) -> 5 Load(1) -> 4 Load(2) -> 7 Load(3) -> 6 Load(4) -> 8 Load(5) -> 0
+ Distance of the route: 9404m
+ Load of the route: 5
+ Route for Vehicle 9:
+ 0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 0
+ Distance of the route: 3210m
+ Load of the route: 2
+ Total distance of all routes: 39358m
+ Total load of all routes: 17
+
+ Advanced usage:
+ Problem solved in 53ms
+
+Change the search strategy. Set 5 minute time limit.  searchParameters.set_local_search_metaheuristic(LocalSearchMetaheuristic::GUIDED_LOCAL_SEARCH);
+searchParameters.mutable_time_limit()->set_seconds(300);
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Fuel_Weed_instance_n18.cc
+Route for Vehicle 0:
+0 Load(0) -> 13 Load(1) -> 14 Load(2) -> 15 Load(3) -> 17 Load(4) -> 16 Load(5) -> 0
+Distance of the route: 12640m
+Load of the route: 5
+Route for Vehicle 1:
+0 Load(0) -> 3 Load(1) -> 5 Load(2) -> 7 Load(3) -> 6 Load(4) -> 8 Load(5) -> 0
+Distance of the route: 8959m
+Load of the route: 5
+Route for Vehicle 2:
+0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 0
+Distance of the route: 3210m
+Load of the route: 2
+Route for Vehicle 3:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+Route for Vehicle 4:
+0 Load(0) -> 12 Load(1) -> 11 Load(2) -> 10 Load(3) -> 9 Load(4) -> 4 Load(5) -> 0
+Distance of the route: 13738m
+Load of the route: 5
+Route for Vehicle 5:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+Route for Vehicle 6:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+Route for Vehicle 7:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+Route for Vehicle 8:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+Route for Vehicle 9:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+Total distance of all routes: 38547m
+Total load of all routes: 17
+
+Advanced usage:
+Problem solved in 300017ms
+
+Changed search strategy. Only using Savings first solution strategy, and limit to 1 solution.
+searchParameters.set_first_solution_strategy(FirstSolutionStrategy::SAVINGS);
+searchParameters.set_solution_limit(1);
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Fuel_Weed_instance_n18.cc
+Route for Vehicle 0:
+0 Load(0) -> 11 Load(1) -> 12 Load(2) -> 13 Load(3) -> 14 Load(4) -> 15 Load(5) -> 0
+Distance of the route: 14105m
+Load of the route: 5
+Route for Vehicle 1:
+0 Load(0) -> 4 Load(1) -> 9 Load(2) -> 10 Load(3) -> 16 Load(4) -> 17 Load(5) -> 0
+Distance of the route: 14486m
+Load of the route: 5
+Route for Vehicle 2:
+0 Load(0) -> 8 Load(1) -> 6 Load(2) -> 7 Load(3) -> 5 Load(4) -> 3 Load(5) -> 0
+Distance of the route: 8959m
+Load of the route: 5
+Route for Vehicle 3:
+0 Load(0) -> 1 Load(1) -> 2 Load(2) -> 0
+Distance of the route: 3210m
+Load of the route: 2
+Route for Vehicle 4:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+etc.
+Total distance of all routes: 40760m
+Total load of all routes: 17
+Advanced usage:
+Problem solved in 46ms
+
+How about we reduce the distance limit to slightly under the current longest route?
+Weed instance (n18), Savings, 1 solution limit, distance limit 1400000 (14,000m).
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Fuel_Weed_instance_n18.cc
+Route for Vehicle 0:
+0 Load(0) -> 12 Load(1) -> 13 Load(2) -> 14 Load(3) -> 15 Load(4) -> 17 Load(5) -> 0
+Distance of the route: 13963m
+Load of the route: 5
+Route for Vehicle 1:
+0 Load(0) -> 10 Load(1) -> 11 Load(2) -> 9 Load(3) -> 4 Load(4) -> 7 Load(5) -> 0
+Distance of the route: 12680m
+Load of the route: 5
+Route for Vehicle 2:
+0 Load(0) -> 2 Load(1) -> 3 Load(2) -> 5 Load(3) -> 6 Load(4) -> 8 Load(5) -> 0
+Distance of the route: 11042m
+Load of the route: 5
+Route for Vehicle 3:
+0 Load(0) -> 1 Load(1) -> 16 Load(2) -> 0
+Distance of the route: 13568m
+Load of the route: 2
+Route for Vehicle 4:
+0 Load(0) -> 0
+Distance of the route: 0m
+Load of the route: 0
+etc.
+Total distance of all routes: 51253m
+Total load of all routes: 17
+Advanced usage:
+Problem solved in 48ms
+
+It reduced the max route distance, but increased the total distance of all routes massively.
+Okay, let's incrementally reduce the distance limit, until solution uses another vehicle.
+
+Savings, 1 solution limit, distance limit 1300000 (13,000m).
+C:\Users\jc321076\github\or-tools>mingw32-make run SOURCE=tests/Capacitated_Fuel_Weed_instance_n18.cc
+Unhandled exception at 0x00007FF7DEE81ECF in Capacitated_Fuel_Weed_instance_n18.exe: 0xC0000005: Access violation reading location 0x0000000000000010. occurred
+
+Hm. Is it because it can't fine a solution?
+Possible reasons:
+A) there is a node that is more than 13,000m from the depot
+ - Plot nodes
+B) Demand capacity and distance limit clashes in a way that doesn't allow for vehicles to return to depot under-capacity?

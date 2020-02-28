@@ -1,0 +1,29 @@
+A log of interactions with the or-tools software.
+
+Hello dear Reader :)
+My name is Tiria Andersen, PhD student, recreational writer, knitter, baker, bookworm, and a sincere follower of Christ.
+If you are reading this, you are probably either my future self or a fellow researcher.
+
+Apologies in advance for the mess.
+
+
+
+*************
+
+To start off, see: https://developers.google.com/optimization/routing/vrp
+I downloaded version 7.4. to Windows.
+
+The first move is to solve one of my own VRP instances with very basic constraints. Just to see if or-tools works.
+The Weed_instance is a real-life instance extracted from drone maps of a weeds in a paddock at Redland Park, McKinlay, QLD Australia.
+See BOPMid_full_matrix.txt for the full instance file.
+The example program in the or-tools' VRP guide was modified to solve the Weed_instance.
+See tests\get_weed_instance_working_tests.txt for the process.
+Next, we add capacity constraints to the Weed_instance program, as in: https://developers.google.com/optimization/routing/cvrp
+See tests\get_capacitated_weed_instance_working_tests.txt for the process.
+
+One issue encountered was the stack size. Because the distance matrix for the Weed instance (n647) is large, it overflows the stack.
+However, the elements of the matrix is accessed frequently by the transit callback, so it's better to keep the distance matrix dynamic. So just increase the stack size for now.
+
+Now, we can add additional constraints.
+Assuming that each vehicle has a fuel (or other energy) capacity, and only refills at the depot, then each vehicle will have a route distance constraint.
+See tests\get_capacitated_fuel_weed_instance_working_tests.txt for process.
