@@ -28,9 +28,9 @@ struct DataModel {
       {581569, 660772, 567487, 514142, 429410, 477339, 512339, 479767, 644975, 422339, 338701, 303995, 215355, 109142, 74142, 44142, 7070, 0},
   };
   const std::vector<int64> demands{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-  const std::vector<int64> vehicle_capacities{5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+  const std::vector<int64> vehicle_capacities{5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,};
   //const std::vector<int64> vehicle_distance_capacities{1000000, 1000000, 1000000, 1000000};
-  const int num_vehicles = 10;
+  const int num_vehicles = 18;
   const RoutingIndexManager::NodeIndex depot{0};
 };
 
@@ -102,32 +102,41 @@ void VrpCapacityFuel() {
           int from_node = manager.IndexToNode(from_index).value();
           return data.demands[from_node];
         });
-    routing.AddDimensionWithVehicleCapacity(
+    routing.AddDimension(
         demand_callback_index,    // transit callback index
         int64{0},                 // null capacity slack
-        data.vehicle_capacities,  // vehicle maximum capacities
+        5,  // vehicle maximum capacities
         true,                     // start cumul to zero
         "Capacity");
     routing.AddDimension(
         transit_callback_index,    // transit callback index
         int64{0},                 // null capacity slack
-        1300000,//data.vehicle_distance_capacities,  // vehicle maximum distance capacities
+        1320000,//data.vehicle_distance_capacities,  // vehicle maximum distance capacities
         true,                     // start cumul to zero
         "Distance");
 
   // Setting first solution heuristic.
   RoutingSearchParameters searchParameters = DefaultRoutingSearchParameters();
   searchParameters.set_first_solution_strategy(FirstSolutionStrategy::SAVINGS);
-  //searchParameters.set_local_search_metaheuristic(LocalSearchMetaheuristic::GUIDED_LOCAL_SEARCH);
-  searchParameters.set_solution_limit(1);
-  //searchParameters.mutable_time_limit()->set_seconds(30);
+  searchParameters.set_local_search_metaheuristic(LocalSearchMetaheuristic::GUIDED_LOCAL_SEARCH);
+  //searchParameters.set_solution_limit();
+  searchParameters.mutable_time_limit()->set_seconds(60);
 
 
   // Solve the problem.
   const Assignment* solution = routing.SolveWithParameters(searchParameters);
 
-  // Print solution on console.
-  PrintSolution(data, manager, routing, *solution);
+  if (solution != nullptr) {
+    // Print solution on console.
+    PrintSolution(data, manager, routing, *solution);
+      // DisplayPlan(manager, routing, *solution, FLAGS_vrp_use_same_vehicle_costs,
+      //             kMaxNodesPerGroup, kSameVehicleCost,
+      //             routing.GetDimensionOrDie(kCapacity),
+      //
+    } else {
+      LOG(INFO) << "No solution found.";
+    }
+
 }
 }  // namespace operations_research
 
