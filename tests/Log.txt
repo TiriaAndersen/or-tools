@@ -12,6 +12,7 @@ Apologies in advance for the mess.
 
 To start off, see: https://developers.google.com/optimization/routing/vrp
 I downloaded version 7.4. to Windows.
+Using VS 2017.
 
 The first move is to solve one of my own VRP instances with very basic constraints. Just to see if or-tools works.
 The Weed_instance is a real-life instance extracted from drone maps of a weeds in a paddock at Redland Park, McKinlay, QLD Australia.
@@ -27,3 +28,21 @@ However, the elements of the matrix is accessed frequently by the transit callba
 Now, we can add additional constraints.
 Assuming that each vehicle has a fuel (or other energy) capacity, and only refills at the depot, then each vehicle will have a route distance constraint.
 See tests\get_capacitated_fuel_weed_instance_working_tests.txt for process.
+
+Notes:
+Some comments on better performance:https://github.com/google/or-tools/issues/1102#issuecomment-471918071
+So far I came up with the following rules of thumb regarding designing cp-sat models for good performance, some of them of course rather obvious:
+
+Keep the amount of variables and constraints as low as possible
+Keep value range of each variable as narrow as possible and prefer boolean variables over int variables
+Constrain the sum of variables (e.g. works.sum() ==0) instead of constraining each individual variable (e.g. work[e,s,d] == 0)
+Replace constraints (e.g. model.Add()) by optimization function (e.g. model.Minimize(xyz)) wherever possible
+Prefer approaches with a AddBoolOr constraint over approaches that use constraints with OnlyEnforceIf
+Precalculate your model to make sure that you don't create contraints that are impossible to hit (I found that CP-SAT does not do this automatically yet)
+Segregate problem into smaller problems and merge the results - if possible
+Structure your problem into steps that are easy to turn on/off in order to troubleshoot constraints that cause performance impacts
+
+> TODO: Look into trace_search and trace_propogation to track the search
+
+Next, we want to visualise the solutions outputted. There is a SVG visualiser thing in python, so I'm gonna try compile a python version. I'll need to use the python wrapper anyway when I start developing my Dynamic VRP framework on top of the static or-tools library.
+See get_visualisation.txt for process.
