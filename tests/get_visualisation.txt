@@ -293,4 +293,10 @@ Which is for Unix...for Windows, let's do:
 C:\Users\jc321076\github\or-tools>python ortools/constraint_solver/doc/routing_svg.py --vrp --solution > vrp_solution.svg
 
 Ah. The svg files are already generated.
-They show a graph if I open them up in my web browser. 
+They show a graph if I open them up in my web browser.
+
+> TODO But I'd prefer a .png image that I can easily put into a document.
+Some options includes converting to .png via inkscape or other package, or load into latex directly, again with svg package &  inkscape.
+https://superuser.com/questions/260047/batch-convert-svg-images-to-desired-size-png-or-ico
+
+Well let's leave that for later. For now, let's modify the routing_svg.py file to solve a subset of the Weed instance.py
