@@ -299,4 +299,14 @@ They show a graph if I open them up in my web browser.
 Some options includes converting to .png via inkscape or other package, or load into latex directly, again with svg package &  inkscape.
 https://superuser.com/questions/260047/batch-convert-svg-images-to-desired-size-png-or-ico
 
-Well let's leave that for later. For now, let's modify the routing_svg.py file to solve a subset of the Weed instance.py
+Well let's leave that for later. For now, let's modify the routing_svg.py file to solve a subset of the Weed instance.py. Modifications:
+
+Modified customer locations and distance matrix according to 16-customer data, changed city block dimensions to 100m x 100m, customer demands to 1, and vehicle capacities to 5. The max coordinates of customer locations and city block size is directly written in SVGPrinter, so I had to manually change each number in the code. Would like to create a variable for these so it can be easily changed.
+Modified line 525 to print the first arc between depot and customer; originally previous_loc_idx = 0 would not go through:
+previous_loc_idx = None
+for loc_idx in route:
+  if previous_loc_idx is not None and previous_loc_idx != loc_idx:
+
+C:\Users\jc321076\github\or-tools>python tests/cfvrp_routing_svg.py --capacity --solution > tests/cvrp_solution.svg
+
+Worked. Now for the full Weed instance. We use the same parameters as Weed_instance.cc

@@ -522,9 +522,6 @@ class SVGPrinter():  # pylint: disable=too-many-instance-attributes
         # First print route
         previous_loc_idx = None
         for loc_idx in route:
-            print('Locations:')
-            print(previous_loc_idx)
-            print(loc_idx)
             if previous_loc_idx is not None and previous_loc_idx != loc_idx:
                 self._svg.draw_polyline(self._data.locations[previous_loc_idx],
                                         self._data.locations[loc_idx],
