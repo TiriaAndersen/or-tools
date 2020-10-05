@@ -20,18 +20,19 @@ See BOPMid_full_matrix.txt for the full instance file.
 The example program in the or-tools' VRP guide was modified to solve the Weed_instance.
 See tests\get_weed_instance_working_tests.txt for the process.
 Next, we add capacity constraints to the Weed_instance program, as in: https://developers.google.com/optimization/routing/cvrp
-See tests\get_capacitated_weed_instance_working_tests.txt for the process.
+See tests\Capacitated_Weed_Instance\get_capacitated_weed_instance_working_tests.txt for the process.
 
 One issue encountered was the stack size. Because the distance matrix for the Weed instance (n647) is large, it overflows the stack.
 However, the elements of the matrix is accessed frequently by the transit callback, so it's better to keep the distance matrix dynamic. So just increase the stack size for now.
 
 Now, we can add additional constraints.
 Assuming that each vehicle has a fuel (or other energy) capacity, and only refills at the depot, then each vehicle will have a route distance constraint.
-See tests\get_capacitated_fuel_weed_instance_working_tests.txt for process.
+See tests\Capacitated_Fuel_Weed_Instance\get_capacitated_fuel_weed_instance_working_tests.txt for process.
 
 Notes:
+-----------------------------------------------------------------
 Some comments on better performance:https://github.com/google/or-tools/issues/1102#issuecomment-471918071
-So far I came up with the following rules of thumb regarding designing cp-sat models for good performance, some of them of course rather obvious:
+"So far I came up with the following rules of thumb regarding designing cp-sat models for good performance, some of them of course rather obvious:
 
 Keep the amount of variables and constraints as low as possible
 Keep value range of each variable as narrow as possible and prefer boolean variables over int variables
@@ -40,9 +41,16 @@ Replace constraints (e.g. model.Add()) by optimization function (e.g. model.Mini
 Prefer approaches with a AddBoolOr constraint over approaches that use constraints with OnlyEnforceIf
 Precalculate your model to make sure that you don't create contraints that are impossible to hit (I found that CP-SAT does not do this automatically yet)
 Segregate problem into smaller problems and merge the results - if possible
-Structure your problem into steps that are easy to turn on/off in order to troubleshoot constraints that cause performance impacts
+Structure your problem into steps that are easy to turn on/off in order to troubleshoot constraints that cause performance impacts"
+-----------------------------------------------------------------
 
 > TODO: Look into trace_search and trace_propogation to track the search
 
 Next, we want to visualise the solutions outputted. There is a SVG visualiser thing in python, so I'm gonna try compile a python version. I'll need to use the python wrapper anyway when I start developing my Dynamic VRP framework on top of the static or-tools library.
 See get_visualisation.txt for process.
+
+Seems like I managed to get visualisation working for small instances but COVID-19 hit and derailed me before I managed to get the full Weed instance visualised. That's okay. I'll come back and do the full thing later.
+
+> TODO: visualise full weed instance.
+
+During COVID, I worked from home and while I didn't get much done, I *did* write up a module of classes that would represent a VRP instance in python. I'd like to call the or-tools solver from within the module (or through an bridging class thingy). See tests\get_solver_integration_ready.txt for process.

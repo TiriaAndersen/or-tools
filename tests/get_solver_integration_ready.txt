@@ -1,0 +1,6 @@
+Trying to make or-tools summonable by a higher level module (as in it uses or-tools as a sub-solver) in python.
+
+This is  a log of command line inputs and outputs.
+Each subsequent program is a duplicate of the previous, with some changes.
+
+ 
