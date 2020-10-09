@@ -176,7 +176,9 @@ Now, I want to import my VRPModeling classes into external_data_routing.py:
 
 from VRPModeling.Depot import Depot
 depot1 = Depot(0, [0, 0])
+print(depot1.__str__())
 
+I comment out the print_solution() command so the output is less cluttered.
 Running it:
 --------------------------------------------------------------------------
 C:\Users\jc321076\github>python external_data_routing.py
@@ -191,3 +193,71 @@ ModuleNotFoundError: No module named 'Node'
 
 
 So the issue isn't the first import, but the import line within Depoty.py, because it assumes Node.py is in the same folder, but external_data_routing.py doesn't know where Node.py is.
+According to this stack overflow answer, we can use a relative reference to fix this:
+https://stackoverflow.com/questions/40397851/python-cant-find-a-module-that-is-imported-in-another-module
+I modify Depot.py in VRPModeling:
+
+from .Node import Node
+
+And run again:
+--------------------------------------------------------------------------
+C:\Users\jc321076\github>python external_data_routing.py
+Depot.id = 0
+Depot.location = [0, 0]
+--------------------------------------------------------------------------
+
+
+Excellent. I modify all imports in VRPModeling classes to a relative reference.
+Then I create add more objects needed for a VRP instance (just the dummy instance found in VRPModeling's sandbox):
+
+from Vehicle import Vehicle
+vehicle1 = Vehicle(11, 0.8)
+print(vehicle1.__str__())
+
+from VRPInstance import VRPInstance
+vrp1 = VRPInstance(vehicle1, depot1)
+
+from Node import Node
+import random
+random.seed(7)
+for i in range(7):
+    x = random.randrange(12)
+    y = random.randrange(15)
+    demand = random.randrange(5, 50, 5)
+    vrp1.add_node([x, y], demand)
+print(vrp1.__str__())
+print(vrp1.nodes_details())
+
+Running it:
+--------------------------------------------------------------------------
+C:\Users\jc321076\github>python external_data_routing.py
+Depot.id = 0
+Depot.location = [0, 0]
+Vehicle.capacities = 11
+Vehicle.variable_cost = 0.8
+name = Andersen_n8
+Vehicle.capacities = 11
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance: 7
+arcs in instance: 7
+id    location    demand
+1     [5, 2]      35
+2     [10, 0]      10
+3     [8, 1]      30
+4     [9, 0]      45
+5     [3, 0]      10
+6     [6, 6]      10
+7     [3, 1]      45
+
+--------------------------------------------------------------------------
+
+
+Now I want VRPModeling to spit out data that is digestible by or-tools. 
+--------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
