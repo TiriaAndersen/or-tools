@@ -1,0 +1,193 @@
+Trying to make or-tools summonable by a higher level module (as in it uses or-tools as a sub-solver) in python.
+
+This is  a log of command line inputs and outputs.
+Each subsequent program is a duplicate of the previous, with some changes.
+
+ As my basis CVRP program, I used the Python version of the complete program found here: https://developers.google.com/optimization/routing/cvrp
+Technically the final product has two capacities - demand and vehicle fuel - but we only deal with demand for now.
+
+First, let's check that python is working:
+--------------------------------------------------------------------------
+C:\Users\jc321076\github\or-tools>python tests/example_routing.py
+Route for vehicle 0:
+ 0 ->  8 ->  6 ->  2 ->  5 -> 0
+Distance of the route: 1552m
+
+Route for vehicle 1:
+ 0 ->  7 ->  1 ->  4 ->  3 -> 0
+Distance of the route: 1552m
+
+Route for vehicle 2:
+ 0 ->  9 ->  10 ->  16 ->  14 -> 0
+Distance of the route: 1552m
+
+Route for vehicle 3:
+ 0 ->  12 ->  11 ->  15 ->  13 -> 0
+Distance of the route: 1552m
+
+Maximum of the route distances: 1552m
+
+--------------------------------------------------------------------------
+
+
+Okay, that works. Now, let's do the same but for the CVRP:
+--------------------------------------------------------------------------
+C:\Users\jc321076\github\or-tools>python tests/external_data_routing.py
+Route for vehicle 0:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  3 Load(7) ->  15 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 1:
+ 0 Load(0) ->  14 Load(4) ->  16 Load(12) ->  10 Load(14) ->  2 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 2:
+ 0 Load(0) ->  7 Load(8) ->  13 Load(12) ->  12 Load(14) ->  11 Load(15) ->  0 Load(15)
+Distance of the route: 1324m
+Load of the route: 15
+
+Route for vehicle 3:
+ 0 Load(0) ->  9 Load(1) ->  8 Load(9) ->  6 Load(13) ->  5 Load(15) ->  0 Load(15)
+Distance of the route: 1164m
+Load of the route: 15
+
+Total distance of all routes: 6872m
+Total load of all routes: 60
+
+--------------------------------------------------------------------------
+
+
+Can we solve external_data_routing.py when located outside the or-tools folder?
+--------------------------------------------------------------------------
+C:\Users\jc321076\github>python external_data_routing.py
+Route for vehicle 0:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  3 Load(7) ->  15 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 1:
+ 0 Load(0) ->  14 Load(4) ->  16 Load(12) ->  10 Load(14) ->  2 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 2:
+ 0 Load(0) ->  7 Load(8) ->  13 Load(12) ->  12 Load(14) ->  11 Load(15) ->  0 Load(15)
+Distance of the route: 1324m
+Load of the route: 15
+
+Route for vehicle 3:
+ 0 Load(0) ->  9 Load(1) ->  8 Load(9) ->  6 Load(13) ->  5 Load(15) ->  0 Load(15)
+Distance of the route: 1164m
+Load of the route: 15
+
+Total distance of all routes: 6872m
+Total load of all routes: 60
+
+--------------------------------------------------------------------------
+
+
+Seems so! What if we move the file to a completely different location?
+--------------------------------------------------------------------------
+C:\Users\jc321076\Documents>python external_data_routing.py
+Route for vehicle 0:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  3 Load(7) ->  15 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 1:
+ 0 Load(0) ->  14 Load(4) ->  16 Load(12) ->  10 Load(14) ->  2 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 2:
+ 0 Load(0) ->  7 Load(8) ->  13 Load(12) ->  12 Load(14) ->  11 Load(15) ->  0 Load(15)
+Distance of the route: 1324m
+Load of the route: 15
+
+Route for vehicle 3:
+ 0 Load(0) ->  9 Load(1) ->  8 Load(9) ->  6 Load(13) ->  5 Load(15) ->  0 Load(15)
+Distance of the route: 1164m
+Load of the route: 15
+
+Total distance of all routes: 6872m
+Total load of all routes: 60
+
+--------------------------------------------------------------------------
+
+
+Yup, seems to work! Okay, now I  want to summon both or-tools and VRPModelling in separate folder.
+I moved external_data_routing.py back into the github folder that contains both or-tools and VRPModelling folders.
+I changed the number for vehicles from 4 to 1:
+--------------------------------------------------------------------------
+C:\Users\jc321076\github>python external_data_routing.py
+
+C:\Users\jc321076\github>
+
+--------------------------------------------------------------------------
+
+
+It spend maybe 5 minutes running and did not produce anything.
+It seems that or-tools doesn't by default understand "one vehicle making multiple routes".
+For now, we can workaround it by having lots of dummy vehicles, each one representing a trip made by the single vehicle.
+
+data['vehicle_capacities'] = [15, 15, 15, 15, 15, 15, 15, 15, 15, 15]  # TODO: make this dependent on num of vehicles for bandaid
+  data['num_vehicles'] = 10  # larger number, higher than the number of routes
+
+This won't work for a dynamic case, because events turn up on a timeline.
+Anyway, I'll use the workaround for now and deal with it at the dynamic stage.
+--------------------------------------------------------------------------
+C:\Users\jc321076\github>python external_data_routing.py
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  3 Load(7) ->  15 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 2:
+ 0 Load(0) ->  14 Load(4) ->  16 Load(12) ->  10 Load(14) ->  2 Load(15) ->  0 Load(15)
+Distance of the route: 2192m
+Load of the route: 15
+
+Route for vehicle 3:
+ 0 Load(0) ->  7 Load(8) ->  13 Load(12) ->  12 Load(14) ->  11 Load(15) ->  0 Load(15)
+Distance of the route: 1324m
+Load of the route: 15
+
+Route for vehicle 4:
+ 0 Load(0) ->  9 Load(1) ->  8 Load(9) ->  6 Load(13) ->  5 Load(15) ->  0 Load(15)
+Distance of the route: 1164m
+Load of the route: 15
+
+Total distance of all routes: 6872m
+Total load of all routes: 60
+
+--------------------------------------------------------------------------
+
+
+There is an extra empty route there, so I know there are enough dummy vehicles assigned.
+
+Now, I want to import my VRPModeling classes into external_data_routing.py:
+
+from VRPModeling.Depot import Depot
+depot1 = Depot(0, [0, 0])
+
+Running it:
+--------------------------------------------------------------------------
+C:\Users\jc321076\github>python external_data_routing.py
+Traceback (most recent call last):
+  File "external_data_routing.py", line 8, in <module>
+    from VRPModeling.Depot import Depot
+  File "C:\Users\jc321076\github\VRPModeling\Depot.py", line 1, in <module>
+    from Node import Node
+ModuleNotFoundError: No module named 'Node'
+
+--------------------------------------------------------------------------
+
+
+So the issue isn't the first import, but the import line within Depoty.py, because it assumes Node.py is in the same folder, but external_data_routing.py doesn't know where Node.py is.

@@ -47,10 +47,10 @@ Structure your problem into steps that are easy to turn on/off in order to troub
 > TODO: Look into trace_search and trace_propogation to track the search
 
 Next, we want to visualise the solutions outputted. There is a SVG visualiser thing in python, so I'm gonna try compile a python version. I'll need to use the python wrapper anyway when I start developing my Dynamic VRP framework on top of the static or-tools library.
-See get_visualisation.txt for process.
+See get_visualisation_working_tests.txt for process.
 
 Seems like I managed to get visualisation working for small instances but COVID-19 hit and derailed me before I managed to get the full Weed instance visualised. That's okay. I'll come back and do the full thing later.
 
 > TODO: visualise full weed instance.
 
-During COVID, I worked from home and while I didn't get much done, I *did* write up a module of classes that would represent a VRP instance in python. I'd like to call the or-tools solver from within the module (or through an bridging class thingy). See tests\get_solver_integration_ready.txt for process.
+During COVID, I worked from home and while I didn't get much done, I *did* write up a module of classes that would represent a VRP instance in python. I'd like to call the or-tools solver from within the module (or through an bridging class thingy). See tests\get_solver_integration_ready_tests.txt for process.
