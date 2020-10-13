@@ -132,8 +132,8 @@ It spend maybe 5 minutes running and did not produce anything.
 It seems that or-tools doesn't by default understand "one vehicle making multiple routes".
 For now, we can workaround it by having lots of dummy vehicles, each one representing a trip made by the single vehicle.
 
-data['vehicle_capacities'] = [15, 15, 15, 15, 15, 15, 15, 15, 15, 15]  # TODO: make this dependent on num of vehicles for bandaid
-  data['num_vehicles'] = 10  # larger number, higher than the number of routes
+  data['vehicle_capacities'] = [15, 15, 15, 15, 15, 15, 15, 15, 15, 15]  # TODO: make this dependent on num of vehicles for bandaid
+    data['num_vehicles'] = 10  # larger number, higher than the number of routes
 
 This won't work for a dynamic case, because events turn up on a timeline.
 Anyway, I'll use the workaround for now and deal with it at the dynamic stage.
@@ -174,9 +174,9 @@ There is an extra empty route there, so I know there are enough dummy vehicles a
 
 Now, I want to import my VRPModeling classes into external_data_routing.py:
 
-from VRPModeling.Depot import Depot
-depot1 = Depot(0, [0, 0])
-print(depot1.__str__())
+  from VRPModeling.Depot import Depot
+  depot1 = Depot(0, [0, 0])
+  print(depot1.__str__())
 
 I comment out the print_solution() command so the output is less cluttered.
 Running it:
@@ -197,7 +197,7 @@ According to this stack overflow answer, we can use a relative reference to fix 
 https://stackoverflow.com/questions/40397851/python-cant-find-a-module-that-is-imported-in-another-module
 I modify Depot.py in VRPModeling:
 
-from .Node import Node
+  from .Node import Node
 
 And run again:
 --------------------------------------------------------------------------
@@ -210,23 +210,23 @@ Depot.location = [0, 0]
 Excellent. I modify all imports in VRPModeling classes to a relative reference.
 Then I create add more objects needed for a VRP instance (just the dummy instance found in VRPModeling's sandbox):
 
-from Vehicle import Vehicle
-vehicle1 = Vehicle(11, 0.8)
-print(vehicle1.__str__())
+  from Vehicle import Vehicle
+  vehicle1 = Vehicle(11, 0.8)
+  print(vehicle1.__str__())
 
-from VRPInstance import VRPInstance
-vrp1 = VRPInstance(vehicle1, depot1)
+  from VRPInstance import VRPInstance
+  vrp1 = VRPInstance(vehicle1, depot1)
 
-from Node import Node
-import random
-random.seed(7)
-for i in range(7):
-    x = random.randrange(12)
-    y = random.randrange(15)
-    demand = random.randrange(5, 50, 5)
-    vrp1.add_node([x, y], demand)
-print(vrp1.__str__())
-print(vrp1.nodes_details())
+  from Node import Node
+  import random
+  random.seed(7)
+  for i in range(7):
+      x = random.randrange(12)
+      y = random.randrange(15)
+      demand = random.randrange(5, 50, 5)
+      vrp1.add_node([x, y], demand)
+  print(vrp1.__str__())
+  print(vrp1.nodes_details())
 
 Running it:
 --------------------------------------------------------------------------
@@ -254,10 +254,105 @@ id    location    demand
 --------------------------------------------------------------------------
 
 
-Now I want VRPModeling to spit out data that is digestible by or-tools. 
+Now I want VRPModeling to spit out data that is digestible by or-tools.
+I created a function called get_distance_matrix() in VRPInstance.
+I want to store the distance matrix as a sparse matrix since not all nodes will necessarily have arcs connecting them.
+I'm assuming that numpy's array is best for the job, but happy to change if not the case.
+
+...I just realised that or-tools doesn't actually need a distance matrix.
+It uses a distance callback - in the example program, it is defined as below:
+
+  def distance_callback(from_index, to_index):
+      """Returns the distance between the two nodes.
+      Basically the way the system internally accesses the distance matrix
+      """
+
+      # Convert from routing variable Index to distance matrix NodeIndex.
+      from_node = manager.IndexToNode(from_index)
+      to_node = manager.IndexToNode(to_index)
+      return data['distance_matrix'][from_node][to_node]
+
+So I can redefine the distance callback to pull distances straight from VRPInstance's arcs list, instead from a distance matrix!
+(I also refactored Node.id as an int, and arcs keys as the Node id)
+The new redefinition:
+
+  def distance_callback(from_index, to_index):
+      """Returns the distance between the two nodes. Distance MUST BE INTEGER!
+      Distance values are scaled by 100. Note that solution printer must scale down by 100.
+
+      Basically the way the system internally accesses the distance matrix.
+      """
+
+      # Convert from routing variable Index to distance matrix NodeIndex.
+      from_node = manager.IndexToNode(from_index)
+      to_node = manager.IndexToNode(to_index)
+      distance = vrp_instance.arcs[from_node][to_node].distance
+      distance = int(round(distance * 100))  # scaling to keep float precision
+      print("distance from node {0} to node {1} is {2}\n".format(from_node, to_node, distance))
+
+      return distance
+
+  distance_callback(1, 2)
+
+I call distance_callback to check that it's working.
+Yes, the distance given is a scale version of the value from the distance matrix.
+(remember that node 0 is the first column of the distance matrix)
 --------------------------------------------------------------------------
 
+[[ 0.          5.38516481  1.          5.09901951  8.54400375  6.08276253
+   3.16227766 10.        ]
+ [ 5.38516481  0.          5.09901951  5.          3.16227766  5.65685425
+   4.12310563  5.        ]
+ [ 1.          5.09901951  0.          4.12310563  8.24621125  5.09901951
+   2.23606798  9.43398113]
+ [ 5.09901951  5.          4.12310563  0.          7.28010989  1.
+   2.          7.07106781]
+ [ 8.54400375  3.16227766  8.24621125  7.28010989  0.          7.61577311
+   7.          3.        ]
+ [ 6.08276253  5.65685425  5.09901951  1.          7.61577311  0.
+   3.          7.        ]
+ [ 3.16227766  4.12310563  2.23606798  2.          7.          3.
+   0.          7.61577311]
+ [10.          5.          9.43398113  7.07106781  3.          7.
+   7.61577311  0.        ]]
+distance from node 1 to node 2 is 510
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
 
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  4 Load(4) ->  3 Load(6) ->  1 Load(7) ->  0 Load(7)
+Distance of the route: 0m
+Load of the route: 7
+
+Route for vehicle 4:
+ 0 Load(0) ->  7 Load(8) ->  6 Load(12) ->  5 Load(14) ->  2 Load(15) ->  0 Load(15)
+Distance of the route: 0m
+Load of the route: 15
+
+Total distance of all routes: 0m
+Total load of all routes: 22
+
+--------------------------------------------------------------------------
+
+But the distances given in the solution is 0! Why?
+Maybe the GetArcCostForVehicle() in print_solution is acting up?
+
+  route_distance += routing.GetArcCostForVehicle(
+          previous_index, index, vehicle_id)
+
+--------------------------------------------------------------------------
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
