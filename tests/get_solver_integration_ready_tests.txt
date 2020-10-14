@@ -346,13 +346,381 @@ Total load of all routes: 22
 
 --------------------------------------------------------------------------
 
-But the distances given in the solution is 0! Why?
-Maybe the GetArcCostForVehicle() in print_solution is acting up?
 
-  route_distance += routing.GetArcCostForVehicle(
-          previous_index, index, vehicle_id)
+But the distances given in the solution is 0! Why?
+I go back to the old distance callback:
+--------------------------------------------------------------------------
+
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  5 Load(2) ->  6 Load(6) ->  2 Load(7) ->  1 Load(8) ->  4 Load(12) ->  3 Load(14) ->  0 Load(14)
+Distance of the route: 2464m
+Load of the route: 14
+
+Route for vehicle 4:
+ 0 Load(0) ->  7 Load(8) ->  0 Load(8)
+Distance of the route: 388m
+Load of the route: 8
+
+Total distance of all routes: 2852m
+Total load of all routes: 22
+[Finished in 1.764s]
 
 --------------------------------------------------------------------------
 
+So the old distance callback works.
+Let's try putting our VRPInstance through create_data_model():.
+
+    def create_data_model(vrp_instance):  # We can replace this with a VRPModeling structure?, or a read-in
+        """Stores the data for the problem. Creates a dictionary, to be exact. """
+
+        data = {}
+        data['distance_matrix'] = vrp_instance.get_distance_matrix()
+        print(data['distance_matrix'])
+
+We print out the distance matrix to make sure it works.
+--------------------------------------------------------------------------
+[[ 0.          5.38516481  1.          5.09901951  8.54400375  6.08276253  3.16227766 10.        ]
+ [ 5.38516481  0.          5.09901951  5.          3.16227766  5.65685425  4.12310563  5.        ]
+ [ 1.          5.09901951  0.          4.12310563  8.24621125  5.09901951  2.23606798  9.43398113]
+ [ 5.09901951  5.          4.12310563  0.          7.28010989  1.          2.          7.07106781]
+ [ 8.54400375  3.16227766  8.24621125  7.28010989  0.          7.61577311  7.          3.        ]
+ [ 6.08276253  5.65685425  5.09901951  1.          7.61577311  0.          3.          7.        ]
+ [ 3.16227766  4.12310563  2.23606798  2.          7.          3.          0.          7.61577311]
+ [10.          5.          9.43398113  7.07106781  3.          7.          7.61577311  0.        ]]
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  7 Load(13) ->  0 Load(13)
+Distance of the route: 21m
+Load of the route: 13
+
+Route for vehicle 4:
+ 0 Load(0) ->  2 Load(1) ->  6 Load(5) ->  3 Load(7) ->  5 Load(9) ->  0 Load(9)
+Distance of the route: 12m
+Load of the route: 9
+
+Total distance of all routes: 33m
+Total load of all routes: 22
+[Finished in 0.398s]
+--------------------------------------------------------------------------
+
+Hm. The distance still shows.
+More interestingly the solution is different from when the distance callback used arcs.
+Is it because distance matrix values are floats?
+or-tools supposedly needs integer values, but it seems to produce a solution anyway?
+Let's try scaling and rounding to an integer:
+
+data['distance_matrix'] = np.rint(vrp_instance.get_distance_matrix() * 100)
+
+The solution might change due to precision:
+--------------------------------------------------------------------------
+
+[[   0.  539.  100.  510.  854.  608.  316. 1000.]
+ [ 539.    0.  510.  500.  316.  566.  412.  500.]
+ [ 100.  510.    0.  412.  825.  510.  224.  943.]
+ [ 510.  500.  412.    0.  728.  100.  200.  707.]
+ [ 854.  316.  825.  728.    0.  762.  700.  300.]
+ [ 608.  566.  510.  100.  762.    0.  300.  700.]
+ [ 316.  412.  224.  200.  700.  300.    0.  762.]
+ [1000.  500.  943.  707.  300.  700.  762.    0.]]
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  7 Load(13) ->  0 Load(13)
+Distance of the route: 2155m
+Load of the route: 13
+
+Route for vehicle 4:
+ 0 Load(0) ->  6 Load(4) ->  3 Load(6) ->  5 Load(8) ->  2 Load(9) ->  0 Load(9)
+Distance of the route: 1226m
+Load of the route: 9
+
+Total distance of all routes: 3381m
+Total load of all routes: 22
+[Finished in 0.469s]
+
+--------------------------------------------------------------------------
+
+
+Okay, weird. The solution did change slightly.
+But it's really similar to the previous solution, with the same nodes in each route.
+Just the order in the second route is swapped around.
+It's still not similar to the arcs distance callback though.
+
+I want to directly pull the distances from arcs instead of having to got through the get_distance_matrix() function.
+A thought: VRPInstance.arcs doesn't actually store arcs going from a node to itself.
+Distance matrices on the other hand store zeros on the diagonal. Does that matter?
+
+    def distance_callback(from_index, to_index):
+
+        # Convert from routing variable Index to distance matrix NodeIndex.
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        if from_node == to_node:
+            distance = 0
+        else:
+            distance = (vrp_instance.arcs[from_node][to_node]).distance
+            distance = round(distance * 100)
+        return distance
+
+Now:
+--------------------------------------------------------------------------
+
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  1 Load(1) ->  4 Load(5) ->  7 Load(13) ->  0 Load(13)
+Distance of the route: 2155m
+Load of the route: 13
+
+Route for vehicle 4:
+ 0 Load(0) ->  6 Load(4) ->  3 Load(6) ->  5 Load(8) ->  2 Load(9) ->  0 Load(9)
+Distance of the route: 1226m
+Load of the route: 9
+
+Total distance of all routes: 3381m
+Total load of all routes: 22
+[Finished in 0.433s]
+
+--------------------------------------------------------------------------
+
+
+Yes! It was the zeroes!
+The solution is the same as the old distance callback on the VRPInstance.
+But showing the distance this time.
+The bug is fixed!
+
+I want to get rid of create_data_model() completely and transfer everything to create_random_vrp_instance().
+The next task is to extract demands directly from vrp_instance.nodes[index].demand
+
+    # Add Capacity constraint
+    def demand_callback(from_index):
+        "Returns the demand of the node"
+        # Convert from routing variable Index to demands NodeIndex
+        from_node = manager.IndexToNode(from_index)
+        return data['demands'][from_node]
+        return demand
+
+Changed to:
+
+        def demand_callback(from_index):
+            from_node = manager.IndexToNode(from_index)
+            demand = vrp_instance.nodes[from_node].demand
+            print(demand)
+            return demand
+
+And the one reference in the solution printer is adjusted:
+
+    route_load += vrp_instance.nodes[node_index].demand
+
+I print the demand so we can see if it extract it properly:
+--------------------------------------------------------------------------
+id    location    demand
+0     [0, 0]      0
+1     [5, 2]      35
+2     [0, 1]      45
+3     [1, 5]      5
+4     [8, 3]      5
+5     [1, 6]      35
+6     [1, 3]      10
+7     [8, 6]      5
+0
+35
+45
+5
+5
+35
+10
+5
+45
+....
+0
+45
+0
+35
+[Finished in 0.569s]
+--------------------------------------------------------------------------
+
+
+It extracts properly, but doesn't print out the solution?
+Ah! What if there is no possible solution because the vehicle capacities are too small:
+
+  data['vehicle_capacities'] = [15, 15, 15, 15, 15]
+
+Let's reduce the demand range to 15 when we generate the demand in create_random_vrp_instance():
+
+    demand = random.randrange(1, 15, 1)
+
+Aaaaand:
+--------------------------------------------------------------------------
+id    location    demand
+0     [0, 0]      0
+1     [5, 2]      7
+2     [0, 1]      14
+3     [8, 1]      6
+4     [9, 0]      9
+5     [3, 0]      2
+6     [6, 6]      2
+7     [3, 1]      9
+[0, 7, 14, 6, 9, 2, 2, 9]
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  3 Load(6) ->  4 Load(15) ->  0 Load(15)
+Distance of the route: 1847m
+Load of the route: 15
+
+Route for vehicle 2:
+ 0 Load(0) ->  6 Load(2) ->  1 Load(9) ->  5 Load(11) ->  0 Load(11)
+Distance of the route: 1844m
+Load of the route: 11
+
+Route for vehicle 3:
+ 0 Load(0) ->  7 Load(9) ->  0 Load(9)
+Distance of the route: 632m
+Load of the route: 9
+
+Route for vehicle 4:
+ 0 Load(0) ->  2 Load(14) ->  0 Load(14)
+Distance of the route: 200m
+Load of the route: 14
+
+Total distance of all routes: 4523m
+Total load of all routes: 49
+[Finished in 0.424s]
+
+--------------------------------------------------------------------------
+
+
+Next I want to get rid of data['vehicle_capacities'] and extract that number straight from create_random_vrp_instance():
+
+  from VRPModeling.Vehicle import Vehicle
+    vehicle1 = Vehicle(15)
+
+Since my problem only has 1 vehicle with one capacity, we don't need the vector of vehicle capacities as found in the original:
+
+    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
+      routing.AddDimensionWithVehicleCapacity(
+          demand_callback_index,
+          0,  # null capacity slack
+          data['vehicle_capacities'],
+          True,  # start culum to zero
+          'Capacity')
+
+Instead of AddDimensionWithVehicleCapacity(), we can just use AddDimension() with a single upper bound capacity:
+
+    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_callback)
+    routing.AddDimension(
+        demand_callback_index,
+        0,  # null capacity slack https://developers.google.com/optimization/routing/dimensions#slack_variables
+        vrp_instance.vehicle.capacity,
+        True,  # start culum to zero
+        'Capacity')
+
+This should give us the same solution.
+--------------------------------------------------------------------------
+
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  3 Load(6) ->  4 Load(15) ->  0 Load(15)
+Distance of the route: 1847m
+Load of the route: 15
+
+Route for vehicle 2:
+ 0 Load(0) ->  6 Load(2) ->  1 Load(9) ->  5 Load(11) ->  0 Load(11)
+Distance of the route: 1844m
+Load of the route: 11
+
+Route for vehicle 3:
+ 0 Load(0) ->  7 Load(9) ->  0 Load(9)
+Distance of the route: 632m
+Load of the route: 9
+
+Route for vehicle 4:
+ 0 Load(0) ->  2 Load(14) ->  0 Load(14)
+Distance of the route: 200m
+Load of the route: 14
+Total distance of all routes: 4523m
+Total load of all routes: 49
+[Finished in 0.4s]
+
+--------------------------------------------------------------------------
+
+
+Yep!
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
