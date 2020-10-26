@@ -1680,6 +1680,7 @@ I've modified sandbox:
     depot1 = Depot(0, [0, 0])
 
 But the commented out part of sandbox still has old imports which won't work.
+Also, I changed the module names to lowercase as according to pep8, so VRPInstance -> vrp_instance.
 Anyway, I run sandbox to import the weed problem:
 --------------------------------------------------------------------------
 
@@ -2027,32 +2028,8 @@ Total load of all routes: 80
 
 
 Huh. Same behaviour. Not good.
-Okay so this is the last known distance matrix for Andersen_n8.vrp:
-
-[[ 0.          5.38516481  1.          5.09901951  8.54400375  6.08276253  3.16227766 10.        ]
- [ 5.38516481  0.          5.09901951  5.          3.16227766  5.65685425  4.12310563  5.        ]
- [ 1.          5.09901951  0.          4.12310563  8.24621125  5.09901951  2.23606798  9.43398113]
- [ 5.09901951  5.          4.12310563  0.          7.28010989  1.          2.          7.07106781]
- [ 8.54400375  3.16227766  8.24621125  7.28010989  0.          7.61577311  7.          3.        ]
- [ 6.08276253  5.65685425  5.09901951  1.          7.61577311  0.          3.          7.        ]
- [ 3.16227766  4.12310563  2.23606798  2.          7.          3.          0.          7.61577311]
- [10.          5.          9.43398113  7.07106781  3.          7.          7.61577311  0.        ]]
-
- And here is what the current one spits out:
---------------------------------------------------------------------------
-
-[[ 0.         13.92838828  9.8488578   1.          8.54400375 10.77032961]
- [13.92838828  0.          9.8488578  13.60147051 10.44030651  3.16227766]
- [ 9.8488578   9.8488578   0.          8.94427191  1.41421356  7.81024968]
- [ 1.         13.60147051  8.94427191  0.          7.61577311 10.44030651]
- [ 8.54400375 10.44030651  1.41421356  7.61577311  0.          8.06225775]
- [10.77032961  3.16227766  7.81024968 10.44030651  8.06225775  0.        ]]
-
---------------------------------------------------------------------------
-
-
 Why are they different?
-The names, dimensions, node locations and demands are the same.
+The names, dimensions, node locations and demands are loading up fine.
 Just the arc distances are playing up.
 I suspect FileProcessor.import_from_vrp_file().
 
@@ -2103,13 +2080,616 @@ The next section of suspect is Arc() itself:
             self.distance = distance
 
 Okay, it printed "distance is indeed None" appropriately....
-So what is wrong? Let me double check the distance matrix...
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
-Is it due to non-Euclidean distances? Or high vehicle capacity?
-Or that some nodes are only connected to a few other nodes?
+Let's look at the distance matrix stored using vrp_instance.get_distance_matrix():
 
-No, I know that the weed instance was logged as solved in get_capacitated_weed_instance_working_tests.txt.
-Whatever is producing this problem is either due to VRPModeling, or anything I've modified in external_data_routing.py
+    def get_distance_matrix(self):
+        """ DEBUG: Creates a numpy array representing a matrix of arc distances.
+        """
+        dim = len(self.nodes)
+        distance_matrix = np.zeros((dim, dim))
+
+        for origin_id, lvl2_dict in self.arcs.items():
+            for destination_id, arc in lvl2_dict.items():
+                arc = self.arcs[origin_id][destination_id]
+                distance_matrix[origin_id][destination_id] = arc.distance
+        return distance_matrix
+
+And the output:
+--------------------------------------------------------------------------
+
+id    location    demand
+0     [0, 0]      0
+1     [5, 13]      5
+2     [9, 4]      15
+3     [1, 0]      15
+4     [8, 3]      20
+5     [4, 10]      25
+[[ 0.         13.92838828  9.8488578   1.          8.54400375 10.77032961]
+ [13.92838828  0.          9.8488578  13.60147051 10.44030651  3.16227766]
+ [ 9.8488578   9.8488578   0.          8.94427191  1.41421356  7.81024968]
+ [ 1.         13.60147051  8.94427191  0.          7.61577311 10.44030651]
+ [ 8.54400375 10.44030651  1.41421356  7.61577311  0.          8.06225775]
+ [10.77032961  3.16227766  7.81024968 10.44030651  8.06225775  0.        ]]
+
+--------------------------------------------------------------------------
+
+I double checked distances using an online distance calculator:
+https://www.calculatorsoup.com/calculators/geometry-plane/distance-two-points.php
+And the distances were correct for several points, so I'm assuming they are correct for all of them.
+
+I think the distances in vrp_instance.arcs are stored correctly, so the next section of suspect is distance_callback() in external_data_routing.py
+
+I'm changing the distance callback to pull distances from get_distance_matrix():
+
+    def distance_callback(from_index, to_index):
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        print("from_node -> to_node: {} -> {} ".format(from_node, to_node))
+        return vrp_instance.get_distance_matrix()[from_node][to_node]
+
+Which gives:
+--------------------------------------------------------------------------
+from_node -> to_node: 0 -> 0
+from_node -> to_node: 0 -> 0
+from_node -> to_node: 0 -> 0
+from_node -> to_node: 0 -> 0
+from_node -> to_node: 0 -> 0
+from_node -> to_node: 1 -> 0
+.
+.
+from_node -> to_node: 5 -> 3
+from_node -> to_node: 2 -> 1
+.
+.
+from_node -> to_node: 0 -> 3
+from_node -> to_node: 2 -> 0
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+from_node -> to_node: 0 -> 1
+from_node -> to_node: 1 -> 5
+from_node -> to_node: 5 -> 0
+Route for vehicle 3:
+ 0 Load(0) ->  1 Load(5) ->  5 Load(30) ->  0 Load(30)
+Distance of the route: 26m
+Load of the route: 30
+
+from_node -> to_node: 0 -> 4
+from_node -> to_node: 4 -> 0
+Route for vehicle 4:
+ 0 Load(0) ->  4 Load(20) ->  0 Load(20)
+Distance of the route: 16m
+Load of the route: 20
+
+from_node -> to_node: 0 -> 3
+from_node -> to_node: 3 -> 2
+from_node -> to_node: 2 -> 0
+Route for vehicle 5:
+ 0 Load(0) ->  3 Load(15) ->  2 Load(30) ->  0 Load(30)
+Distance of the route: 18m
+Load of the route: 30
+
+Total distance of all routes: 60m
+Total load of all routes: 80
+[Finished in 0.463s]
+
+--------------------------------------------------------------------------
+
+Yes! It worked! So there must be something wrong with how distance_callback() extracted distances from vrp_instance.arcs
+But it worked before, so why now?
+
+Anyway let's come back to the whys later. I want to get the weed problem solved.
+I'll let the distance callback get its distances from get_distance_matrix() for now.
+To ensure it doesn't take too long, I set ortools to stop after finding one solution:
+
+    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    search_parameters.set_solution_limit = 1
+
+This should give a solution fairly quickly.
+--------------------------------------------------------------------------
+
+C:\Users\jc321076\github>
+ python external_data_routing.py
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+DEMAND_SECTION
+
+name = BOPMid_full_matrix
+Vehicle.capacity = 80000
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 647
+arcs in instance: 417962
+[[    0.    1362.13  1257.11 ...     0.   36605.84 30021.17]
+ [ 1362.13     0.     591.42 ...     0.   35188.69 29549.85]
+ [ 1257.11   591.42     0.   ... 24497.06 35036.61 28803.41]
+ ...
+ [    0.       0.   24497.06 ...     0.   19515.43 29337.72]
+ [36605.84 35188.69 35036.61 ... 19515.43     0.   18250.97]
+ [30021.17 29549.85 28803.41 ... 29337.72 18250.97     0.  ]]
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 641:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 642:
+ 0 Load(0) ->  98 Load(100) ->  97 Load(200) ->  96 Load(250) ->  95 Load(350) ->  94 Load(400) ->  93 Load(500) ->  92 Load(550) ->  91 Load(650) ->  90 Load(700) ->  89 Load(750) ->  88 Load(850) ->  87 Load(950) ->  86 Load(1000) ->  85 Load(1100) ->  84 Load(1200) ->  83 Load(1250) ->  82 Load(1300) ->  81 Load(1400) ->  80 Load(1500) ->  79 Load(1600) ->  78 Load(1700) ->  77 Load(1800) ->  76 Load(1900) ->  75 Load(2000) ->  74 Load(2050) ->  73 Load(2100) ->  72 Load(2200) ->  71 Load(2250) ->  70 Load(2300) ->  69 Load(2350) ->  68 Load(2400) ->  67 Load(2450) ->  66 Load(2500) ->  65 Load(2550) ->  64 Load(2580) ->  63 Load(2630) ->  62 Load(2680) ->  61 Load(2730) ->  60 Load(2780) ->  59 Load(2830) ->  58 Load(2880) ->  57 Load(2930) ->  56 Load(2980) ->  55 Load(3080) ->  54 Load(3130) ->  53 Load(3180) ->  52 Load(3230) ->  51 Load(3280) ->  50 Load(3330) ->  49 Load(3380) ->  48 Load(3430) ->  47 Load(3480) ->  46 Load(3530) ->  45 Load(3580) ->  44 Load(3630) ->  43 Load(3680) ->  42 Load(3730) ->  41 Load(3780) ->  40 Load(3830) ->  39 Load(3880) ->  38 Load(3980) ->  37 Load(4030) ->  36 Load(4080) ->  35 Load(4180) ->  34 Load(4230) ->  33 Load(4280) ->  32 Load(4380) ->  31 Load(4430) ->  30 Load(4480) ->  29 Load(4530) ->  28 Load(4580) ->  27 Load(4680) ->  26 Load(4780) ->  25 Load(4880) ->  24 Load(4980) ->  23 Load(5080) ->  22 Load(5180) ->  21 Load(5280) ->  20 Load(5330) ->  19 Load(5430) ->  18 Load(5530) ->  17 Load(5580) ->  16 Load(5630) ->  15 Load(5730) ->  14 Load(5830) ->  13 Load(5930) ->  12 Load(6030) ->  11 Load(6130) ->  10 Load(6230) ->  9 Load(6330) ->  8 Load(6430) ->  7 Load(6530) ->  6 Load(6630) ->  5 Load(6730) ->  4 Load(6830) ->  3 Load(6880) ->  2 Load(6980) ->  1 Load(7080) ->  0 Load(7080)
+Distance of the route: 0m
+Load of the route: 7080
+
+Route for vehicle 643:
+ 0 Load(0) ->  228 Load(100) ->  226 Load(200) ->  225 Load(300) ->  224 Load(400) ->  223 Load(450) ->  222 Load(550) ->  221 Load(650) ->  220 Load(750) ->  219 Load(800) ->  218 Load(900) ->  217 Load(1000) ->  216 Load(1050) ->  215 Load(1100) ->  214 Load(1200) ->  213 Load(1300) ->  212 Load(1350) ->  211 Load(1450) ->  210 Load(1550) ->  209 Load(1650) ->  208 Load(1750) ->  207 Load(1850) ->  206 Load(1950) ->  205 Load(2050) ->  204 Load(2150) ->  203 Load(2250) ->  202 Load(2350) ->  201 Load(2450) ->  200 Load(2550) ->  199 Load(2600) ->  198 Load(2650) ->  197 Load(2750) ->  196 Load(2850) ->  195 Load(2950) ->  194 Load(3000) ->  193 Load(3050) ->  192 Load(3100) ->  191 Load(3200) ->  190 Load(3300) ->  189 Load(3400) ->  188 Load(3500) ->  187 Load(3600) ->  186 Load(3700) ->  185 Load(3800) ->  184 Load(3900) ->  183 Load(3950) ->  182 Load(4050) ->  181 Load(4100) ->  180 Load(4150) ->  179 Load(4200) ->  178 Load(4250) ->  177 Load(4300) ->  176 Load(4350) ->  175 Load(4400) ->  174 Load(4450) ->  173 Load(4550) ->  172 Load(4650) ->  171 Load(4750) ->  170 Load(4800) ->  169 Load(4900) ->  168 Load(5000) ->  167 Load(5100) ->  166 Load(5200) ->  165 Load(5250) ->  164 Load(5300) ->  163 Load(5350) ->  162 Load(5400) ->  161 Load(5450) ->  160 Load(5500) ->  159 Load(5550) ->  158 Load(5600) ->  157 Load(5700) ->  156 Load(5750) ->  155 Load(5850) ->  154 Load(5900) ->  153 Load(6000) ->  152 Load(6100) ->  151 Load(6200) ->  150 Load(6300) ->  149 Load(6350) ->  148 Load(6450) ->  147 Load(6550) ->  146 Load(6650) ->  145 Load(6750) ->  144 Load(6850) ->  143 Load(6950) ->  142 Load(7050) ->  141 Load(7150) ->  140 Load(7250) ->  139 Load(7350) ->  138 Load(7380) ->  137 Load(7430) ->  136 Load(7530) ->  135 Load(7580) ->  134 Load(7630) ->  133 Load(7680) ->  132 Load(7730) ->  131 Load(7830) ->  130 Load(7880) ->  129 Load(7980) ->  128 Load(8030) ->  127 Load(8080) ->  126 Load(8130) ->  125 Load(8180) ->  124 Load(8230) ->  123 Load(8280) ->  122 Load(8330) ->  121 Load(8380) ->  120 Load(8430) ->  119 Load(8530) ->  118 Load(8630) ->  117 Load(8680) ->  116 Load(8780) ->  115 Load(8880) ->  114 Load(8980) ->  113 Load(9080) ->  112 Load(9180) ->  111 Load(9280) ->  110 Load(9380) ->  109 Load(9430) ->  108 Load(9480) ->  107 Load(9530) ->  106 Load(9580) ->  105 Load(9630) ->  104 Load(9680) ->  103 Load(9730) ->  102 Load(9780) ->  101 Load(9830) ->  100 Load(9880) ->  99 Load(9980) ->  0 Load(9980)
+Distance of the route: 0m
+Load of the route: 9980
+
+Route for vehicle 644:
+ 0 Load(0) ->  355 Load(50) ->  354 Load(100) ->  353 Load(200) ->  352 Load(250) ->  351 Load(300) ->  350 Load(350) ->  349 Load(380) ->  348 Load(480) ->  347 Load(530) ->  346 Load(580) ->  345 Load(610) ->  344 Load(710) ->  343 Load(760) ->  342 Load(810) ->  341 Load(860) ->  340 Load(960) ->  339 Load(1060) ->  338 Load(1160) ->  337 Load(1210) ->  336 Load(1260) ->  335 Load(1310) ->  334 Load(1360) ->  333 Load(1410) ->  332 Load(1460) ->  331 Load(1560) ->  330 Load(1660) ->  329 Load(1760) ->  328 Load(1810) ->  327 Load(1910) ->  326 Load(2010) ->  325 Load(2060) ->  324 Load(2110) ->  323 Load(2160) ->  322 Load(2210) ->  321 Load(2260) ->  320 Load(2360) ->  319 Load(2410) ->  318 Load(2460) ->  317 Load(2510) ->  316 Load(2560) ->  315 Load(2660) ->  314 Load(2710) ->  313 Load(2760) ->  312 Load(2810) ->  311 Load(2910) ->  310 Load(3010) ->  309 Load(3060) ->  308 Load(3160) ->  307 Load(3210) ->  306 Load(3260) ->  305 Load(3360) ->  304 Load(3460) ->  303 Load(3560) ->  302 Load(3660) ->  301 Load(3690) ->  300 Load(3790) ->  299 Load(3890) ->  298 Load(3990) ->  297 Load(4090) ->  296 Load(4140) ->  295 Load(4170) ->  294 Load(4220) ->  293 Load(4270) ->  292 Load(4300) ->  291 Load(4330) ->  290 Load(4380) ->  289 Load(4480) ->  288 Load(4580) ->  287 Load(4680) ->  286 Load(4780) ->  285 Load(4880) ->  284 Load(4980) ->  283 Load(5080) ->  282 Load(5180) ->  281 Load(5280) ->  280 Load(5380) ->  279 Load(5480) ->  278 Load(5580) ->  277 Load(5680) ->  276 Load(5780) ->  275 Load(5880) ->  274 Load(5930) ->  273 Load(6030) ->  272 Load(6080) ->  271 Load(6130) ->  270 Load(6180) ->  269 Load(6280) ->  268 Load(6380) ->  267 Load(6480) ->  266 Load(6580) ->  265 Load(6680) ->  264 Load(6780) ->  263 Load(6880) ->  262 Load(6980) ->  261 Load(7080) ->  260 Load(7180) ->  259 Load(7280) ->  258 Load(7330) ->  257 Load(7430) ->  256 Load(7530) ->  255 Load(7630) ->  254 Load(7730) ->  253 Load(7830) ->  252 Load(7930) ->  251 Load(8030) ->  250 Load(8130) ->  249 Load(8230) ->  248 Load(8330) ->  247 Load(8430) ->  246 Load(8480) ->  245 Load(8580) ->  244 Load(8680) ->  243 Load(8780) ->  242 Load(8880) ->  241 Load(8980) ->  240 Load(9080) ->  239 Load(9130) ->  238 Load(9180) ->  237 Load(9230) ->  236 Load(9280) ->  235 Load(9330) ->  234 Load(9430) ->  233 Load(9530) ->  232 Load(9630) ->  231 Load(9730) ->  230 Load(9830) ->  229 Load(9930) ->  227 Load(9980) ->  0 Load(9980)
+Distance of the route: 0m
+Load of the route: 9980
+
+Route for vehicle 645:
+ 0 Load(0) ->  495 Load(100) ->  494 Load(200) ->  493 Load(250) ->  492 Load(300) ->  491 Load(350) ->  490 Load(450) ->  489 Load(550) ->  488 Load(650) ->  487 Load(750) ->  486 Load(850) ->  485 Load(950) ->  484 Load(1050) ->  483 Load(1150) ->  482 Load(1250) ->  481 Load(1350) ->  480 Load(1450) ->  479 Load(1550) ->  478 Load(1650) ->  477 Load(1750) ->  476 Load(1850) ->  475 Load(1900) ->  474 Load(1950) ->  473 Load(2000) ->  472 Load(2050) ->  471 Load(2100) ->  470 Load(2150) ->  469 Load(2200) ->  468 Load(2250) ->  467 Load(2280) ->  466 Load(2330) ->  465 Load(2360) ->  464 Load(2410) ->  463 Load(2460) ->  462 Load(2490) ->  461 Load(2540) ->  460 Load(2640) ->  459 Load(2690) ->  458 Load(2740) ->  457 Load(2790) ->  456 Load(2840) ->  455 Load(2890) ->  454 Load(2940) ->  453 Load(2990) ->  452 Load(3090) ->  451 Load(3190) ->  450 Load(3240) ->  449 Load(3290) ->  448 Load(3340) ->  447 Load(3390) ->  446 Load(3440) ->  445 Load(3490) ->  444 Load(3540) ->  443 Load(3590) ->  442 Load(3620) ->  441 Load(3650) ->  440 Load(3700) ->  439 Load(3750) ->  438 Load(3800) ->  437 Load(3850) ->  436 Load(3900) ->  435 Load(3950) ->  434 Load(4000) ->  433 Load(4050) ->  432 Load(4100) ->  431 Load(4150) ->  430 Load(4200) ->  429 Load(4300) ->  428 Load(4400) ->  427 Load(4500) ->  426 Load(4550) ->  425 Load(4650) ->  424 Load(4750) ->  423 Load(4850) ->  422 Load(4900) ->  421 Load(4950) ->  420 Load(4980) ->  419 Load(5030) ->  418 Load(5080) ->  417 Load(5130) ->  416 Load(5180) ->  415 Load(5230) ->  414 Load(5280) ->  413 Load(5330) ->  412 Load(5380) ->  411 Load(5430) ->  410 Load(5480) ->  409 Load(5530) ->  408 Load(5630) ->  407 Load(5680) ->  406 Load(5730) ->  405 Load(5780) ->  404 Load(5830) ->  403 Load(5880) ->  402 Load(5930) ->  401 Load(5980) ->  400 Load(6080) ->  399 Load(6130) ->  398 Load(6230) ->  397 Load(6280) ->  396 Load(6380) ->  395 Load(6430) ->  394 Load(6530) ->  393 Load(6630) ->  392 Load(6730) ->  391 Load(6830) ->  390 Load(6930) ->  389 Load(7030) ->  388 Load(7130) ->  387 Load(7180) ->  386 Load(7230) ->  385 Load(7330) ->  384 Load(7380) ->  383 Load(7430) ->  382 Load(7480) ->  381 Load(7530) ->  380 Load(7630) ->  379 Load(7730) ->  378 Load(7830) ->  377 Load(7930) ->  376 Load(8030) ->  375 Load(8130) ->  374 Load(8230) ->  373 Load(8330) ->  372 Load(8380) ->  371 Load(8480) ->  370 Load(8580) ->  369 Load(8680) ->  368 Load(8780) ->  367 Load(8880) ->  366 Load(8980) ->  365 Load(9080) ->  364 Load(9180) ->  363 Load(9280) ->  362 Load(9380) ->  361 Load(9480) ->  360 Load(9580) ->  359 Load(9680) ->  358 Load(9780) ->  357 Load(9880) ->  356 Load(9980) ->  0 Load(9980)
+Distance of the route: 0m
+Load of the route: 9980
+
+Route for vehicle 646:
+ 0 Load(0) ->  646 Load(100) ->  645 Load(200) ->  644 Load(300) ->  643 Load(350) ->  642 Load(400) ->  641 Load(450) ->  640 Load(500) ->  639 Load(550) ->  638 Load(600) ->  637 Load(700) ->  636 Load(750) ->  635 Load(850) ->  634 Load(950) ->  633 Load(1000) ->  632 Load(1100) ->  631 Load(1200) ->  630 Load(1300) ->  629 Load(1400) ->  628 Load(1500) ->  627 Load(1550) ->  626 Load(1650) ->  625 Load(1750) ->  624 Load(1850) ->  623 Load(1950) ->  622 Load(2050) ->  621 Load(2150) ->  620 Load(2250) ->  619 Load(2350) ->  618 Load(2400) ->  617 Load(2500) ->  616 Load(2550) ->  615 Load(2600) ->  614 Load(2650) ->  613 Load(2700) ->  612 Load(2750) ->  611 Load(2850) ->  610 Load(2900) ->  609 Load(2950) ->  608 Load(3000) ->  607 Load(3050) ->  606 Load(3100) ->  605 Load(3150) ->  604 Load(3200) ->  603 Load(3250) ->  602 Load(3280) ->  601 Load(3310) ->  600 Load(3410) ->  599 Load(3460) ->  598 Load(3510) ->  597 Load(3560) ->  596 Load(3610) ->  595 Load(3660) ->  594 Load(3710) ->  593 Load(3760) ->  592 Load(3810) ->  591 Load(3860) ->  590 Load(3910) ->  589 Load(4010) ->  588 Load(4110) ->  587 Load(4160) ->  586 Load(4210) ->  585 Load(4260) ->  584 Load(4310) ->  583 Load(4360) ->  582 Load(4410) ->  581 Load(4460) ->  580 Load(4510) ->  579 Load(4610) ->  578 Load(4710) ->  577 Load(4760) ->  576 Load(4860) ->  575 Load(4910) ->  574 Load(5010) ->  573 Load(5110) ->  572 Load(5160) ->  571 Load(5260) ->  570 Load(5310) ->  569 Load(5410) ->  568 Load(5460) ->  567 Load(5510) ->  566 Load(5610) ->  565 Load(5710) ->  564 Load(5760) ->  563 Load(5810) ->  562 Load(5860) ->  561 Load(5910) ->  560 Load(6010) ->  559 Load(6060) ->  558 Load(6110) ->  557 Load(6160) ->  556 Load(6210) ->  555 Load(6260) ->  554 Load(6310) ->  553 Load(6410) ->  552 Load(6460) ->  551 Load(6560) ->  550 Load(6660) ->  549 Load(6760) ->  548 Load(6810) ->  547 Load(6860) ->  546 Load(6910) ->  545 Load(7010) ->  544 Load(7040) ->  543 Load(7090) ->  542 Load(7140) ->  541 Load(7190) ->  540 Load(7240) ->  539 Load(7290) ->  538 Load(7340) ->  537 Load(7440) ->  536 Load(7490) ->  535 Load(7540) ->  534 Load(7590) ->  533 Load(7640) ->  532 Load(7740) ->  531 Load(7790) ->  530 Load(7840) ->  529 Load(7890) ->  528 Load(7990) ->  527 Load(8090) ->  526 Load(8140) ->  525 Load(8240) ->  524 Load(8340) ->  523 Load(8370) ->  522 Load(8470) ->  521 Load(8570) ->  520 Load(8620) ->  519 Load(8670) ->  518 Load(8720) ->  517 Load(8770) ->  516 Load(8820) ->  515 Load(8870) ->  514 Load(8970) ->  513 Load(9070) ->  512 Load(9100) ->  511 Load(9150) ->  510 Load(9200) ->  509 Load(9250) ->  508 Load(9300) ->  507 Load(9350) ->  506 Load(9400) ->  505 Load(9450) ->  504 Load(9500) ->  503 Load(9550) ->  502 Load(9600) ->  501 Load(9700) ->  500 Load(9750) ->  499 Load(9850) ->  498 Load(9900) ->  497 Load(9950) ->  496 Load(10000) ->  0 Load(10000)
+Distance of the route: 0m
+Load of the route: 10000
+
+Total distance of all routes: 0m
+Total load of all routes: 47020
+
+--------------------------------------------------------------------------
+
+
+Running external_data_routing.py took too long within Atom, so I ran it in cmd instead.
+It also took more than a minute in cmd, so I killed the process, and it outputted the above.
+The distance is 0m, again. How frustrating.
+
+I ran Andersen_n8 again in Atom, and everything runs fine as before.
+I try solving X_n101_k25. It loads and outputs the distance matrix, but
+
+--------------------------------------------------------------------------
+
+NAME : 	X-n101-k25
+
+COMMENT : 	"Generated by Uchoa, Pecin, Pessoa, Poggi, Subramanian, and Vidal (2013)"
+
+TYPE : 	CVRP
+
+DIMENSION : 	101
+
+EDGE_WEIGHT_TYPE : 	EUC_2D
+
+CAPACITY : 	206
+
+DEMAND_SECTION
+
+name = X-n101-k25
+Vehicle.capacity = 206
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [365, 689]
+nodes in instance, including depot: 101
+arcs in instance: 10100
+[[   0.          554.11370674  806.3404988  ...  647.87653145
+   644.23753383  257.33441278]
+ [ 554.11370674    0.          669.28394572 ... 1090.74745015
+  1116.1379843   738.14700433]
+ [ 806.3404988   669.28394572    0.         ...  893.10301757
+   958.78516885  765.73755295]
+ ...
+ [ 647.87653145 1090.74745015  893.10301757 ...    0.
+    79.30952024  391.18921253]
+ [ 644.23753383 1116.1379843   958.78516885 ...   79.30952024
+     0.          393.60005081]
+ [ 257.33441278  738.14700433  765.73755295 ...  391.18921253
+   393.60005081    0.        ]]
+--------------------------------------------------------------------------
+
+Perhaps because get_distance_matrix() creates a distance matrix each time it is called, it takes too long and bloats the process?
+In that case, we just summon the distance matrix once.
+
+    distance_matrix = vrp_instance.get_distance_matrix()
+
+    def distance_callback(from_index, to_index):
+          from_node = manager.IndexToNode(from_index)
+          to_node = manager.IndexToNode(to_index)
+          return distance_matrix[from_node][to_node]
+
+And try running X_n101_k25 again:
+--------------------------------------------------------------------------
+
+NAME : 	X-n101-k25
+
+COMMENT : 	"Generated by Uchoa, Pecin, Pessoa, Poggi, Subramanian, and Vidal (2013)"
+
+TYPE : 	CVRP
+
+DIMENSION : 	101
+
+EDGE_WEIGHT_TYPE : 	EUC_2D
+
+CAPACITY : 	206
+
+DEMAND_SECTION
+
+name = X-n101-k25
+Vehicle.capacity = 206
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [365, 689]
+nodes in instance, including depot: 101
+arcs in instance: 10100
+[[   0.          554.11370674  806.3404988  ...  647.87653145
+   644.23753383  257.33441278]
+ [ 554.11370674    0.          669.28394572 ... 1090.74745015
+  1116.1379843   738.14700433]
+ [ 806.3404988   669.28394572    0.         ...  893.10301757
+   958.78516885  765.73755295]
+ ...
+ [ 647.87653145 1090.74745015  893.10301757 ...    0.
+    79.30952024  391.18921253]
+ [ 644.23753383 1116.1379843   958.78516885 ...   79.30952024
+     0.          393.60005081]
+ [ 257.33441278  738.14700433  765.73755295 ...  391.18921253
+   393.60005081    0.        ]]
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  98 Load(51) ->  89 Load(69) ->  47 Load(80) ->  29 Load(84) ->  36 Load(181) ->  72 Load(197) ->  0 Load(197)
+Distance of the route: 2111m
+Load of the route: 197
+.
+.
+.
+Route for vehicle 74:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 75:
+ 0 Load(0) ->  70 Load(96) ->  76 Load(102) ->  2 Load(153) ->  49 Load(206) ->  0 Load(206)
+Distance of the route: 2224m
+Load of the route: 206
+
+Route for vehicle 76:
+ 0 Load(0) ->  64 Load(3) ->  87 Load(5) ->  43 Load(20) ->  45 Load(34) ->  7 Load(35) ->  74 Load(108) ->  16 Load(205) ->  0 Load(205)
+Distance of the route: 2265m
+Load of the route: 205
+
+Route for vehicle 77:
+ 0 Load(0) ->  65 Load(5) ->  78 Load(44) ->  6 Load(98) ->  37 Load(168) ->  57 Load(176) ->  88 Load(197) ->  0 Load(197)
+Distance of the route: 1344m
+Load of the route: 197
+
+Route for vehicle 78:
+ 0 Load(0) ->  92 Load(68) ->  9 Load(130) ->  55 Load(202) ->  0 Load(202)
+Distance of the route: 1372m
+Load of the route: 202
+
+Route for vehicle 79:
+ 0 Load(0) ->  51 Load(80) ->  62 Load(118) ->  99 Load(196) ->  0 Load(196)
+Distance of the route: 1313m
+Load of the route: 196
+
+Route for vehicle 80:
+ 0 Load(0) ->  1 Load(38) ->  86 Load(111) ->  54 Load(178) ->  69 Load(206) ->  0 Load(206)
+Distance of the route: 1466m
+Load of the route: 206
+
+Route for vehicle 81:
+ 0 Load(0) ->  66 Load(46) ->  84 Load(89) ->  90 Load(144) ->  68 Load(196) ->  0 Load(196)
+Distance of the route: 1203m
+Load of the route: 196
+
+Route for vehicle 82:
+ 0 Load(0) ->  71 Load(18) ->  83 Load(114) ->  52 Load(201) ->  0 Load(201)
+Distance of the route: 1219m
+Load of the route: 201
+
+Route for vehicle 83:
+ 0 Load(0) ->  26 Load(18) ->  48 Load(111) ->  3 Load(184) ->  34 Load(189) ->  0 Load(189)
+Distance of the route: 1141m
+Load of the route: 189
+
+Route for vehicle 84:
+ 0 Load(0) ->  39 Load(27) ->  25 Load(80) ->  10 Load(178) ->  0 Load(178)
+Distance of the route: 925m
+Load of the route: 178
+
+Route for vehicle 85:
+ 0 Load(0) ->  14 Load(27) ->  28 Load(59) ->  42 Load(135) ->  63 Load(200) ->  0 Load(200)
+Distance of the route: 1059m
+Load of the route: 200
+
+Route for vehicle 86:
+ 0 Load(0) ->  11 Load(25) ->  81 Load(39) ->  91 Load(114) ->  27 Load(201) ->  0 Load(201)
+Distance of the route: 1165m
+Load of the route: 201
+
+Route for vehicle 87:
+ 0 Load(0) ->  59 Load(55) ->  60 Load(122) ->  82 Load(205) ->  0 Load(205)
+Distance of the route: 985m
+Load of the route: 205
+
+Route for vehicle 88:
+ 0 Load(0) ->  40 Load(42) ->  67 Load(142) ->  77 Load(206) ->  0 Load(206)
+Distance of the route: 904m
+Load of the route: 206
+
+Route for vehicle 89:
+ 0 Load(0) ->  18 Load(81) ->  4 Load(151) ->  13 Load(197) ->  0 Load(197)
+Distance of the route: 1270m
+Load of the route: 197
+
+Route for vehicle 90:
+ 0 Load(0) ->  15 Load(17) ->  22 Load(79) ->  41 Load(146) ->  20 Load(205) ->  0 Load(205)
+Distance of the route: 836m
+Load of the route: 205
+
+Route for vehicle 91:
+ 0 Load(0) ->  94 Load(61) ->  96 Load(101) ->  44 Load(140) ->  58 Load(198) ->  0 Load(198)
+Distance of the route: 874m
+Load of the route: 198
+
+Route for vehicle 92:
+ 0 Load(0) ->  75 Load(76) ->  93 Load(176) ->  33 Load(191) ->  0 Load(191)
+Distance of the route: 805m
+Load of the route: 191
+
+Route for vehicle 93:
+ 0 Load(0) ->  31 Load(95) ->  73 Load(102) ->  53 Load(199) ->  0 Load(199)
+Distance of the route: 840m
+Load of the route: 199
+
+Route for vehicle 94:
+ 0 Load(0) ->  38 Load(32) ->  56 Load(82) ->  8 Load(180) ->  0 Load(180)
+Distance of the route: 991m
+Load of the route: 180
+
+Route for vehicle 95:
+ 0 Load(0) ->  80 Load(70) ->  17 Load(144) ->  0 Load(144)
+Distance of the route: 474m
+Load of the route: 144
+
+Route for vehicle 96:
+ 0 Load(0) ->  23 Load(66) ->  19 Load(128) ->  85 Load(140) ->  30 Load(201) ->  0 Load(201)
+Distance of the route: 792m
+Load of the route: 201
+
+Route for vehicle 97:
+ 0 Load(0) ->  21 Load(23) ->  100 Load(58) ->  61 Load(147) ->  97 Load(195) ->  0 Load(195)
+Distance of the route: 745m
+Load of the route: 195
+
+Route for vehicle 98:
+ 0 Load(0) ->  5 Load(58) ->  12 Load(144) ->  0 Load(144)
+Distance of the route: 533m
+Load of the route: 144
+
+Route for vehicle 99:
+ 0 Load(0) ->  79 Load(86) ->  50 Load(130) ->  0 Load(130)
+Distance of the route: 350m
+Load of the route: 130
+
+Route for vehicle 100:
+ 0 Load(0) ->  35 Load(53) ->  46 Load(96) ->  24 Load(131) ->  95 Load(155) ->  32 Load(178) ->  0 Load(178)
+Distance of the route: 889m
+Load of the route: 178
+
+Total distance of all routes: 30095m
+Total load of all routes: 5147
+[Finished in 1.783s]
+
+--------------------------------------------------------------------------
+
+
+Yay! It worked! Let's try with BOPMid_full_matrix:
+ vehicle_capacity = 10000
+ search_parameters.time_limit.seconds = 30
+
+--------------------------------------------------------------------------
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+DEMAND_SECTION
+
+name = BOPMid_full_matrix
+Vehicle.capacity = 80000
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 647
+arcs in instance: 417962
+[[    0.    1362.13  1257.11 ...     0.   36605.84 30021.17]
+ [ 1362.13     0.     591.42 ...     0.   35188.69 29549.85]
+ [ 1257.11   591.42     0.   ... 24497.06 35036.61 28803.41]
+ ...
+ [    0.       0.   24497.06 ...     0.   19515.43 29337.72]
+ [36605.84 35188.69 35036.61 ... 19515.43     0.   18250.97]
+ [30021.17 29549.85 28803.41 ... 29337.72 18250.97     0.  ]]
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  285 Load(100) ->  0 Load(100)
+Distance of the route: 0m
+Load of the route: 100
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+.
+.
+.
+Route for vehicle 641:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 642:
+ 0 Load(0) ->  540 Load(50) ->  271 Load(100) ->  302 Load(200) ->  270 Load(250) ->  295 Load(280) ->  301 Load(310) ->  293 Load(360) ->  1 Load(460) ->  2 Load(560) ->  456 Load(610) ->  83 Load(660) ->  84 Load(760) ->  581 Load(810) ->  114 Load(910) ->  141 Load(1010) ->  166 Load(1110) ->  162 Load(1160) ->  163 Load(1210) ->  559 Load(1260) ->  327 Load(1360) ->  329 Load(1460) ->  330 Load(1560) ->  596 Load(1610) ->  400 Load(1710) ->  595 Load(1760) ->  511 Load(1810) ->  236 Load(1860) ->  399 Load(1910) ->  398 Load(2010) ->  460 Load(2110) ->  249 Load(2210) ->  451 Load(2310) ->  241 Load(2410) ->  502 Load(2460) ->  594 Load(2510) ->  503 Load(2560) ->  494 Load(2660) ->  507 Load(2710) ->  553 Load(2810) ->  308 Load(2910) ->  309 Load(2960) ->  390 Load(3060) ->  304 Load(3160) ->  477 Load(3260) ->  299 Load(3360) ->  300 Load(3460) ->  478 Load(3560) ->  611 Load(3660) ->  273 Load(3760) ->  261 Load(3860) ->  263 Load(3960) ->  272 Load(4010) ->  260 Load(4110) ->  262 Load(4210) ->  264 Load(4310) ->  265 Load(4410) ->  267 Load(4510) ->  266 Load(4610) ->  268 Load(4710) ->  269 Load(4810) ->  256 Load(4910) ->  257 Load(5010) ->  464 Load(5060) ->  221 Load(5160) ->  513 Load(5260) ->  225 Load(5360) ->  463 Load(5410) ->  570 Load(5460) ->  571 Load(5560) ->  572 Load(5610) ->  574 Load(5710) ->  536 Load(5760) ->  620 Load(5860) ->  525 Load(5960) ->  625 Load(6060) ->  622 Load(6160) ->  629 Load(6260) ->  632 Load(6360) ->  586 Load(6410) ->  631 Load(6510) ->  485 Load(6610) ->  420 Load(6640) ->  637 Load(6740) ->  638 Load(6790) ->  607 Load(6840) ->  516 Load(6890) ->  515 Load(6940) ->  517 Load(6990) ->  539 Load(7040) ->  583 Load(7090) ->  618 Load(7140) ->  584 Load(7190) ->  640 Load(7240) ->  534 Load(7290) ->  535 Load(7340) ->  520 Load(7390) ->  522 Load(7490) ->  521 Load(7590) ->  519 Load(7640) ->  580 Load(7690) ->  518 Load(7740) ->  538 Load(7790) ->  474 Load(7840) ->  597 Load(7890) ->  475 Load(7940) ->  598 Load(7990) ->  600 Load(8090) ->  353 Load(8190) ->  355 Load(8240) ->  208 Load(8340) ->  465 Load(8370) ->  111 Load(8470) ->  110 Load(8570) ->  100 Load(8620) ->  101 Load(8670) ->  102 Load(8720) ->  566 Load(8820) ->  106 Load(8870) ->  76 Load(8970) ->  224 Load(9070) ->  24 Load(9170) ->  21 Load(9270) ->  199 Load(9320) ->  6 Load(9420) ->  238 Load(9470) ->  4 Load(9570) ->  7 Load(9670) ->  5 Load(9770) ->  0 Load(9770)
+Distance of the route: 36089m
+Load of the route: 9770
+
+Route for vehicle 643:
+ 0 Load(0) ->  287 Load(100) ->  286 Load(200) ->  469 Load(250) ->  642 Load(300) ->  587 Load(350) ->  641 Load(400) ->  626 Load(500) ->  533 Load(550) ->  630 Load(650) ->  635 Load(750) ->  636 Load(800) ->  624 Load(900) ->  621 Load(1000) ->  486 Load(1100) ->  483 Load(1200) ->  481 Load(1300) ->  480 Load(1400) ->  479 Load(1500) ->  646 Load(1600) ->  432 Load(1650) ->  431 Load(1700) ->  239 Load(1750) ->  394 Load(1850) ->  633 Load(1900) ->  523 Load(1930) ->  577 Load(1980) ->  212 Load(2030) ->  576 Load(2130) ->  142 Load(2230) ->  143 Load(2330) ->  169 Load(2430) ->  144 Load(2530) ->  145 Load(2630) ->  103 Load(2680) ->  159 Load(2730) ->  158 Load(2780) ->  156 Load(2830) ->  155 Load(2930) ->  154 Load(2980) ->  153 Load(3080) ->  160 Load(3130) ->  146 Load(3230) ->  151 Load(3330) ->  152 Load(3430) ->  545 Load(3530) ->  164 Load(3580) ->  176 Load(3630) ->  128 Load(3680) ->  109 Load(3730) ->  94 Load(3780) ->  89 Load(3830) ->  90 Load(3880) ->  93 Load(3980) ->  108 Load(4030) ->  92 Load(4080) ->  91 Load(4180) ->  97 Load(4280) ->  96 Load(4330) ->  95 Load(4430) ->  79 Load(4530) ->  203 Load(4630) ->  46 Load(4680) ->  48 Load(4730) ->  47 Load(4780) ->  132 Load(4830) ->  121 Load(4880) ->  122 Load(4930) ->  124 Load(4980) ->  74 Load(5030) ->  41 Load(5080) ->  40 Load(5130) ->  98 Load(5230) ->  45 Load(5280) ->  44 Load(5330) ->  42 Load(5380) ->  43 Load(5430) ->  55 Load(5530) ->  54 Load(5580) ->  51 Load(5630) ->  117 Load(5680) ->  120 Load(5730) ->  52 Load(5780) ->  53 Load(5830) ->  56 Load(5880) ->  58 Load(5930) ->  59 Load(5980) ->  61 Load(6030) ->  62 Load(6080) ->  32 Load(6180) ->  73 Load(6230) ->  85 Load(6330) ->  604 Load(6380) ->  137 Load(6430) ->  127 Load(6480) ->  72 Load(6580) ->  86 Load(6630) ->  66 Load(6680) ->  67 Load(6730) ->  68 Load(6780) ->  69 Load(6830) ->  65 Load(6880) ->  70 Load(6930) ->  71 Load(6980) ->  81 Load(7080) ->  82 Load(7130) ->  33 Load(7180) ->  602 Load(7210) ->  75 Load(7310) ->  107 Load(7360) ->  134 Load(7410) ->  77 Load(7510) ->  125 Load(7560) ->  78 Load(7660) ->  126 Load(7710) ->  80 Load(7810) ->  133 Load(7860) ->  104 Load(7910) ->  105 Load(7960) ->  202 Load(8060) ->  115 Load(8160) ->  112 Load(8260) ->  113 Load(8360) ->  219 Load(8410) ->  378 Load(8510) ->  228 Load(8610) ->  372 Load(8660) ->  537 Load(8760) ->  608 Load(8810) ->  514 Load(8910) ->  217 Load(9010) ->  28 Load(9060) ->  31 Load(9110) ->  30 Load(9160) ->  13 Load(9260) ->  14 Load(9360) ->  29 Load(9410) ->  34 Load(9460) ->  35 Load(9560) ->  36 Load(9610) ->  37 Load(9660) ->  218 Load(9760) ->  0 Load(9760)
+Distance of the route: 26529m
+Load of the route: 9760
+
+Route for vehicle 644:
+ 0 Load(0) ->  8 Load(100) ->  550 Load(200) ->  9 Load(300) ->  10 Load(400) ->  230 Load(500) ->  12 Load(600) ->  22 Load(700) ->  23 Load(800) ->  27 Load(900) ->  26 Load(1000) ->  15 Load(1100) ->  20 Load(1150) ->  19 Load(1250) ->  16 Load(1300) ->  17 Load(1350) ->  18 Load(1450) ->  216 Load(1500) ->  129 Load(1600) ->  565 Load(1700) ->  39 Load(1750) ->  138 Load(1780) ->  136 Load(1880) ->  123 Load(1930) ->  63 Load(1980) ->  579 Load(2080) ->  50 Load(2130) ->  57 Load(2180) ->  60 Load(2230) ->  575 Load(2280) ->  49 Load(2330) ->  118 Load(2430) ->  119 Load(2530) ->  116 Load(2630) ->  38 Load(2730) ->  206 Load(2830) ->  135 Load(2880) ->  131 Load(2980) ->  140 Load(3080) ->  254 Load(3180) ->  543 Load(3230) ->  544 Load(3260) ->  161 Load(3310) ->  165 Load(3360) ->  147 Load(3460) ->  148 Load(3560) ->  149 Load(3610) ->  167 Load(3710) ->  150 Load(3810) ->  168 Load(3910) ->  366 Load(4010) ->  307 Load(4060) ->  255 Load(4160) ->  542 Load(4210) ->  306 Load(4260) ->  259 Load(4360) ->  258 Load(4410) ->  359 Load(4510) ->  335 Load(4560) ->  326 Load(4660) ->  601 Load(4690) ->  556 Load(4740) ->  324 Load(4790) ->  325 Load(4840) ->  320 Load(4940) ->  319 Load(4990) ->  196 Load(5090) ->  609 Load(5140) ->  588 Load(5240) ->  351 Load(5290) ->  350 Load(5340) ->  348 Load(5440) ->  197 Load(5540) ->  349 Load(5570) ->  347 Load(5620) ->  346 Load(5670) ->  340 Load(5770) ->  186 Load(5870) ->  345 Load(5900) ->  344 Load(6000) ->  342 Load(6050) ->  343 Load(6100) ->  341 Load(6150) ->  337 Load(6200) ->  338 Load(6300) ->  332 Load(6350) ->  561 Load(6400) ->  331 Load(6500) ->  191 Load(6600) ->  313 Load(6650) ->  557 Load(6700) ->  328 Load(6750) ->  555 Load(6800) ->  311 Load(6900) ->  312 Load(6950) ->  194 Load(7000) ->  310 Load(7100) ->  315 Load(7200) ->  316 Load(7250) ->  200 Load(7350) ->  317 Load(7400) ->  318 Load(7450) ->  192 Load(7500) ->  323 Load(7550) ->  322 Load(7600) ->  321 Load(7650) ->  614 Load(7700) ->  615 Load(7750) ->  616 Load(7800) ->  613 Load(7850) ->  391 Load(7950) ->  369 Load(8050) ->  227 Load(8100) ->  368 Load(8200) ->  229 Load(8300) ->  367 Load(8400) ->  599 Load(8450) ->  389 Load(8550) ->  358 Load(8650) ->  356 Load(8750) ->  582 Load(8800) ->  0 Load(8800)
+Distance of the route: 38458m
+Load of the route: 8800
+
+Route for vehicle 645:
+ 0 Load(0) ->  643 Load(50) ->  288 Load(150) ->  289 Load(250) ->  281 Load(350) ->  282 Load(450) ->  280 Load(550) ->  279 Load(650) ->  278 Load(750) ->  277 Load(850) ->  541 Load(900) ->  283 Load(1000) ->  284 Load(1100) ->  294 Load(1150) ->  639 Load(1200) ->  292 Load(1230) ->  276 Load(1330) ->  291 Load(1360) ->  290 Load(1410) ->  634 Load(1510) ->  298 Load(1610) ->  297 Load(1710) ->  11 Load(1810) ->  562 Load(1860) ->  201 Load(1960) ->  244 Load(2060) ->  413 Load(2110) ->  417 Load(2160) ->  416 Load(2210) ->  412 Load(2260) ->  401 Load(2310) ->  472 Load(2360) ->  403 Load(2410) ->  402 Load(2460) ->  233 Load(2560) ->  415 Load(2610) ->  414 Load(2660) ->  434 Load(2710) ->  445 Load(2760) ->  242 Load(2860) ->  173 Load(2960) ->  552 Load(3010) ->  240 Load(3110) ->  470 Load(3160) ->  433 Load(3210) ->  462 Load(3240) ->  409 Load(3290) ->  408 Load(3390) ->  410 Load(3440) ->  411 Load(3490) ->  407 Load(3540) ->  406 Load(3590) ->  459 Load(3640) ->  458 Load(3690) ->  235 Load(3740) ->  447 Load(3790) ->  457 Load(3840) ->  424 Load(3940) ->  423 Load(4040) ->  455 Load(4090) ->  589 Load(4190) ->  439 Load(4240) ->  438 Load(4290) ->  436 Load(4340) ->  437 Load(4390) ->  471 Load(4440) ->  435 Load(4490) ->  444 Load(4540) ->  446 Load(4590) ->  443 Load(4640) ->  383 Load(4690) ->  422 Load(4740) ->  421 Load(4790) ->  387 Load(4840) ->  468 Load(4890) ->  430 Load(4940) ->  370 Load(5040) ->  448 Load(5090) ->  382 Load(5140) ->  440 Load(5190) ->  371 Load(5290) ->  441 Load(5320) ->  373 Load(5420) ->  449 Load(5470) ->  381 Load(5520) ->  442 Load(5550) ->  386 Load(5600) ->  466 Load(5650) ->  467 Load(5680) ->  612 Load(5730) ->  428 Load(5830) ->  429 Load(5930) ->  450 Load(5980) ->  427 Load(6080) ->  362 Load(6180) ->  461 Load(6230) ->  363 Load(6330) ->  426 Load(6380) ->  274 Load(6430) ->  419 Load(6480) ->  418 Load(6530) ->  388 Load(6630) ->  482 Load(6730) ->  617 Load(6830) ->  619 Load(6930) ->  484 Load(7030) ->  454 Load(7080) ->  452 Load(7180) ->  237 Load(7230) ->  453 Load(7280) ->  234 Load(7380) ->  395 Load(7430) ->  425 Load(7530) ->  396 Load(7630) ->  393 Load(7730) ->  397 Load(7780) ->  246 Load(7830) ->  404 Load(7880) ->  473 Load(7930) ->  405 Load(7980) ->  243 Load(8080) ->  379 Load(8180) ->  232 Load(8280) ->  384 Load(8330) ->  275 Load(8430) ->  380 Load(8530) ->  606 Load(8580) ->  375 Load(8680) ->  374 Load(8780) ->  512 Load(8810) ->  64 Load(8840) ->  578 Load(8940) ->  603 Load(8990) ->  357 Load(9090) ->  0 Load(9090)
+Distance of the route: 18346m
+Load of the route: 9090
+
+Route for vehicle 646:
+ 0 Load(0) ->  585 Load(50) ->  3 Load(100) ->  99 Load(200) ->  130 Load(250) ->  184 Load(350) ->  198 Load(400) ->  170 Load(450) ->  195 Load(550) ->  25 Load(650) ->  139 Load(750) ->  87 Load(850) ->  88 Load(950) ->  226 Load(1050) ->  215 Load(1100) ->  214 Load(1200) ->  223 Load(1250) ->  175 Load(1300) ->  183 Load(1350) ->  182 Load(1450) ->  178 Load(1500) ->  179 Load(1550) ->  181 Load(1600) ->  180 Load(1650) ->  220 Load(1750) ->  177 Load(1800) ->  222 Load(1900) ->  188 Load(2000) ->  190 Load(2100) ->  189 Load(2200) ->  187 Load(2300) ->  185 Load(2400) ->  207 Load(2500) ->  213 Load(2600) ->  204 Load(2700) ->  205 Load(2800) ->  645 Load(2900) ->  211 Load(3000) ->  210 Load(3100) ->  548 Load(3150) ->  209 Load(3250) ->  352 Load(3300) ->  354 Load(3350) ->  339 Load(3450) ->  592 Load(3500) ->  510 Load(3550) ->  364 Load(3650) ->  509 Load(3700) ->  591 Load(3750) ->  508 Load(3800) ->  590 Load(3850) ->  495 Load(3950) ->  505 Load(4000) ->  569 Load(4100) ->  551 Load(4200) ->  231 Load(4300) ->  172 Load(4400) ->  568 Load(4450) ->  174 Load(4500) ->  560 Load(4600) ->  171 Load(4700) ->  549 Load(4800) ->  554 Load(4850) ->  610 Load(4900) ->  558 Load(4950) ->  546 Load(5000) ->  564 Load(5050) ->  336 Load(5100) ->  563 Load(5150) ->  334 Load(5200) ->  193 Load(5250) ->  333 Load(5300) ->  593 Load(5350) ->  385 Load(5450) ->  377 Load(5550) ->  376 Load(5650) ->  605 Load(5700) ->  392 Load(5800) ->  476 Load(5900) ->  305 Load(6000) ->  547 Load(6050) ->  157 Load(6150) ->  361 Load(6250) ->  506 Load(6300) ->  504 Load(6350) ->  365 Load(6450) ->  501 Load(6550) ->  360 Load(6650) ->  499 Load(6750) ->  253 Load(6850) ->  498 Load(6900) ->  252 Load(7000) ->  567 Load(7050) ->  250 Load(7150) ->  497 Load(7200) ->  314 Load(7250) ->  496 Load(7300) ->  303 Load(7400) ->  493 Load(7450) ->  500 Load(7500) ->  251 Load(7600) ->  492 Load(7650) ->  248 Load(7750) ->  491 Load(7800) ->  247 Load(7900) ->  490 Load(8000) ->  489 Load(8100) ->  245 Load(8200) ->  488 Load(8300) ->  532 Load(8400) ->  623 Load(8500) ->  524 Load(8600) ->  627 Load(8650) ->  526 Load(8700) ->  527 Load(8800) ->  573 Load(8900) ->  529 Load(8950) ->  528 Load(9050) ->  530 Load(9100) ->  487 Load(9200) ->  531 Load(9250) ->  628 Load(9350) ->  296 Load(9400) ->  644 Load(9500) ->  0 Load(9500)
+Distance of the route: 19609m
+Load of the route: 9500
+
+Total distance of all routes: 139031m
+Total load of all routes: 47020
+[Finished in 31.976s]
+--------------------------------------------------------------------------
+
+
+It worked! Excellent. Looks like the total distance is 139031m for a solution found in 30 seconds.
+Note that I didn't convert the distance matrix into integers.
+
+Let's see if the solution improves given a longer search time - say 2 minutes.
+--------------------------------------------------------------------------
+
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+DEMAND_SECTION
+
+name = BOPMid_full_matrix
+Vehicle.capacity = 80000
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 647
+arcs in instance: 417962
+[[    0.    1362.13  1257.11 ...     0.   36605.84 30021.17]
+ [ 1362.13     0.     591.42 ...     0.   35188.69 29549.85]
+ [ 1257.11   591.42     0.   ... 24497.06 35036.61 28803.41]
+ ...
+ [    0.       0.   24497.06 ...     0.   19515.43 29337.72]
+ [36605.84 35188.69 35036.61 ... 19515.43     0.   18250.97]
+ [30021.17 29549.85 28803.41 ... 29337.72 18250.97     0.  ]]
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  285 Load(100) ->  0 Load(100)
+Distance of the route: 0m
+Load of the route: 100
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+.
+.
+.
+Route for vehicle 641:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 642:
+ 0 Load(0) ->  643 Load(50) ->  288 Load(150) ->  289 Load(250) ->  281 Load(350) ->  282 Load(450) ->  280 Load(550) ->  279 Load(650) ->  278 Load(750) ->  277 Load(850) ->  284 Load(950) ->  283 Load(1050) ->  541 Load(1100) ->  634 Load(1200) ->  298 Load(1300) ->  297 Load(1400) ->  11 Load(1500) ->  562 Load(1550) ->  201 Load(1650) ->  244 Load(1750) ->  413 Load(1800) ->  417 Load(1850) ->  416 Load(1900) ->  412 Load(1950) ->  425 Load(2050) ->  395 Load(2100) ->  234 Load(2200) ->  453 Load(2250) ->  237 Load(2300) ->  452 Load(2400) ->  454 Load(2450) ->  456 Load(2500) ->  176 Load(2550) ->  128 Load(2600) ->  109 Load(2650) ->  94 Load(2700) ->  226 Load(2800) ->  215 Load(2850) ->  214 Load(2950) ->  223 Load(3000) ->  175 Load(3050) ->  183 Load(3100) ->  182 Load(3200) ->  178 Load(3250) ->  179 Load(3300) ->  181 Load(3350) ->  180 Load(3400) ->  220 Load(3500) ->  177 Load(3550) ->  222 Load(3650) ->  188 Load(3750) ->  187 Load(3850) ->  189 Load(3950) ->  190 Load(4050) ->  554 Load(4100) ->  601 Load(4130) ->  558 Load(4180) ->  546 Load(4230) ->  564 Load(4280) ->  336 Load(4330) ->  563 Load(4380) ->  334 Load(4430) ->  333 Load(4480) ->  593 Load(4530) ->  385 Load(4630) ->  570 Load(4680) ->  571 Load(4780) ->  572 Load(4830) ->  573 Load(4930) ->  536 Load(4980) ->  620 Load(5080) ->  525 Load(5180) ->  625 Load(5280) ->  622 Load(5380) ->  629 Load(5480) ->  632 Load(5580) ->  586 Load(5630) ->  631 Load(5730) ->  485 Load(5830) ->  420 Load(5860) ->  637 Load(5960) ->  638 Load(6010) ->  607 Load(6060) ->  516 Load(6110) ->  515 Load(6160) ->  517 Load(6210) ->  539 Load(6260) ->  583 Load(6310) ->  618 Load(6360) ->  584 Load(6410) ->  640 Load(6460) ->  534 Load(6510) ->  535 Load(6560) ->  520 Load(6610) ->  522 Load(6710) ->  521 Load(6810) ->  519 Load(6860) ->  580 Load(6910) ->  518 Load(6960) ->  538 Load(7010) ->  474 Load(7060) ->  598 Load(7110) ->  358 Load(7210) ->  600 Load(7310) ->  465 Load(7340) ->  101 Load(7390) ->  102 Load(7440) ->  566 Load(7540) ->  106 Load(7590) ->  76 Load(7690) ->  224 Load(7790) ->  13 Load(7890) ->  22 Load(7990) ->  21 Load(8090) ->  199 Load(8140) ->  4 Load(8240) ->  7 Load(8340) ->  5 Load(8440) ->  0 Load(8440)
+Distance of the route: 26741m
+Load of the route: 8440
+
+Route for vehicle 643:
+ 0 Load(0) ->  6 Load(100) ->  238 Load(150) ->  550 Load(250) ->  8 Load(350) ->  549 Load(450) ->  9 Load(550) ->  10 Load(650) ->  230 Load(750) ->  12 Load(850) ->  195 Load(950) ->  170 Load(1000) ->  198 Load(1050) ->  184 Load(1150) ->  193 Load(1200) ->  174 Load(1250) ->  560 Load(1350) ->  171 Load(1450) ->  568 Load(1500) ->  172 Load(1600) ->  231 Load(1700) ->  551 Load(1800) ->  569 Load(1900) ->  505 Load(1950) ->  495 Load(2050) ->  590 Load(2100) ->  508 Load(2150) ->  591 Load(2200) ->  509 Load(2250) ->  364 Load(2350) ->  510 Load(2400) ->  592 Load(2450) ->  609 Load(2500) ->  353 Load(2600) ->  354 Load(2650) ->  352 Load(2700) ->  209 Load(2800) ->  548 Load(2850) ->  210 Load(2950) ->  211 Load(3050) ->  645 Load(3150) ->  205 Load(3250) ->  204 Load(3350) ->  213 Load(3450) ->  574 Load(3550) ->  355 Load(3600) ->  186 Load(3700) ->  185 Load(3800) ->  130 Load(3850) ->  88 Load(3950) ->  89 Load(4000) ->  90 Load(4050) ->  93 Load(4150) ->  108 Load(4200) ->  92 Load(4250) ->  91 Load(4350) ->  97 Load(4450) ->  96 Load(4500) ->  95 Load(4600) ->  79 Load(4700) ->  203 Load(4800) ->  46 Load(4850) ->  48 Load(4900) ->  47 Load(4950) ->  39 Load(5000) ->  132 Load(5050) ->  122 Load(5100) ->  124 Load(5150) ->  74 Load(5200) ->  41 Load(5250) ->  40 Load(5300) ->  98 Load(5400) ->  45 Load(5450) ->  44 Load(5500) ->  38 Load(5600) ->  42 Load(5650) ->  43 Load(5700) ->  55 Load(5800) ->  54 Load(5850) ->  51 Load(5900) ->  117 Load(5950) ->  120 Load(6000) ->  52 Load(6050) ->  53 Load(6100) ->  56 Load(6150) ->  58 Load(6200) ->  59 Load(6250) ->  61 Load(6300) ->  62 Load(6350) ->  32 Load(6450) ->  73 Load(6500) ->  85 Load(6600) ->  604 Load(6650) ->  137 Load(6700) ->  127 Load(6750) ->  72 Load(6850) ->  86 Load(6900) ->  66 Load(6950) ->  67 Load(7000) ->  68 Load(7050) ->  69 Load(7100) ->  65 Load(7150) ->  70 Load(7200) ->  71 Load(7250) ->  81 Load(7350) ->  82 Load(7400) ->  33 Load(7450) ->  602 Load(7480) ->  75 Load(7580) ->  107 Load(7630) ->  134 Load(7680) ->  77 Load(7780) ->  125 Load(7830) ->  78 Load(7930) ->  126 Load(7980) ->  80 Load(8080) ->  133 Load(8130) ->  104 Load(8180) ->  105 Load(8230) ->  202 Load(8330) ->  115 Load(8430) ->  112 Load(8530) ->  113 Load(8630) ->  219 Load(8680) ->  378 Load(8780) ->  228 Load(8880) ->  372 Load(8930) ->  537 Load(9030) ->  608 Load(9080) ->  514 Load(9180) ->  217 Load(9280) ->  31 Load(9330) ->  28 Load(9380) ->  29 Load(9430) ->  34 Load(9480) ->  35 Load(9580) ->  36 Load(9630) ->  37 Load(9680) ->  218 Load(9780) ->  0 Load(9780)
+Distance of the route: 16817m
+Load of the route: 9780
+
+Route for vehicle 644:
+ 0 Load(0) ->  540 Load(50) ->  271 Load(100) ->  302 Load(200) ->  270 Load(250) ->  290 Load(300) ->  291 Load(330) ->  301 Load(360) ->  295 Load(390) ->  294 Load(440) ->  639 Load(490) ->  292 Load(520) ->  276 Load(620) ->  293 Load(670) ->  1 Load(770) ->  212 Load(820) ->  207 Load(920) ->  208 Load(1020) ->  162 Load(1070) ->  557 Load(1120) ->  328 Load(1170) ->  327 Load(1270) ->  329 Load(1370) ->  330 Load(1470) ->  596 Load(1520) ->  400 Load(1620) ->  595 Load(1670) ->  511 Load(1720) ->  236 Load(1770) ->  399 Load(1820) ->  398 Load(1920) ->  460 Load(2020) ->  249 Load(2120) ->  451 Load(2220) ->  241 Load(2320) ->  502 Load(2370) ->  594 Load(2420) ->  503 Load(2470) ->  494 Load(2570) ->  507 Load(2620) ->  553 Load(2720) ->  308 Load(2820) ->  309 Load(2870) ->  390 Load(2970) ->  304 Load(3070) ->  477 Load(3170) ->  299 Load(3270) ->  300 Load(3370) ->  478 Load(3470) ->  611 Load(3570) ->  273 Load(3670) ->  261 Load(3770) ->  263 Load(3870) ->  272 Load(3920) ->  260 Load(4020) ->  262 Load(4120) ->  264 Load(4220) ->  265 Load(4320) ->  267 Load(4420) ->  266 Load(4520) ->  268 Load(4620) ->  269 Load(4720) ->  256 Load(4820) ->  257 Load(4920) ->  258 Load(4970) ->  259 Load(5070) ->  359 Load(5170) ->  335 Load(5220) ->  326 Load(5320) ->  610 Load(5370) ->  556 Load(5420) ->  324 Load(5470) ->  325 Load(5520) ->  320 Load(5620) ->  319 Load(5670) ->  196 Load(5770) ->  339 Load(5870) ->  588 Load(5970) ->  351 Load(6020) ->  350 Load(6070) ->  348 Load(6170) ->  349 Load(6200) ->  347 Load(6250) ->  346 Load(6300) ->  340 Load(6400) ->  197 Load(6500) ->  345 Load(6530) ->  344 Load(6630) ->  342 Load(6680) ->  343 Load(6730) ->  341 Load(6780) ->  337 Load(6830) ->  338 Load(6930) ->  332 Load(6980) ->  561 Load(7030) ->  331 Load(7130) ->  191 Load(7230) ->  313 Load(7280) ->  555 Load(7330) ->  163 Load(7380) ->  559 Load(7430) ->  311 Load(7530) ->  312 Load(7580) ->  194 Load(7630) ->  310 Load(7730) ->  315 Load(7830) ->  316 Load(7880) ->  200 Load(7980) ->  317 Load(8030) ->  318 Load(8080) ->  192 Load(8130) ->  323 Load(8180) ->  322 Load(8230) ->  321 Load(8280) ->  614 Load(8330) ->  615 Load(8380) ->  616 Load(8430) ->  613 Load(8480) ->  391 Load(8580) ->  369 Load(8680) ->  227 Load(8730) ->  368 Load(8830) ->  229 Load(8930) ->  367 Load(9030) ->  597 Load(9080) ->  356 Load(9180) ->  582 Load(9230) ->  0 Load(9230)
+Distance of the route: 30055m
+Load of the route: 9230
+
+Route for vehicle 645:
+ 0 Load(0) ->  287 Load(100) ->  286 Load(200) ->  469 Load(250) ->  642 Load(300) ->  587 Load(350) ->  641 Load(400) ->  626 Load(500) ->  533 Load(550) ->  630 Load(650) ->  635 Load(750) ->  636 Load(800) ->  624 Load(900) ->  621 Load(1000) ->  486 Load(1100) ->  483 Load(1200) ->  481 Load(1300) ->  619 Load(1400) ->  484 Load(1500) ->  617 Load(1600) ->  482 Load(1700) ->  480 Load(1800) ->  479 Load(1900) ->  646 Load(2000) ->  164 Load(2050) ->  545 Load(2150) ->  146 Load(2250) ->  151 Load(2350) ->  152 Load(2450) ->  160 Load(2500) ->  153 Load(2600) ->  154 Load(2650) ->  155 Load(2750) ->  156 Load(2800) ->  158 Load(2850) ->  159 Load(2900) ->  103 Load(2950) ->  145 Load(3050) ->  144 Load(3150) ->  169 Load(3250) ->  143 Load(3350) ->  142 Load(3450) ->  576 Load(3550) ->  2 Load(3650) ->  577 Load(3700) ->  523 Load(3730) ->  633 Load(3780) ->  394 Load(3880) ->  239 Load(3930) ->  431 Load(3980) ->  432 Load(4030) ->  362 Load(4130) ->  461 Load(4180) ->  363 Load(4280) ->  426 Load(4330) ->  274 Load(4380) ->  419 Load(4430) ->  418 Load(4480) ->  388 Load(4580) ->  428 Load(4680) ->  429 Load(4780) ->  612 Load(4830) ->  466 Load(4880) ->  467 Load(4910) ->  447 Load(4960) ->  457 Load(5010) ->  424 Load(5110) ->  423 Load(5210) ->  455 Load(5260) ->  589 Load(5360) ->  427 Load(5460) ->  450 Load(5510) ->  242 Load(5610) ->  173 Load(5710) ->  552 Load(5760) ->  240 Load(5860) ->  470 Load(5910) ->  433 Load(5960) ->  462 Load(5990) ->  409 Load(6040) ->  408 Load(6140) ->  410 Load(6190) ->  411 Load(6240) ->  407 Load(6290) ->  406 Load(6340) ->  459 Load(6390) ->  458 Load(6440) ->  235 Load(6490) ->  443 Load(6540) ->  383 Load(6590) ->  422 Load(6640) ->  421 Load(6690) ->  387 Load(6740) ->  468 Load(6790) ->  430 Load(6840) ->  370 Load(6940) ->  448 Load(6990) ->  382 Load(7040) ->  440 Load(7090) ->  371 Load(7190) ->  441 Load(7220) ->  373 Load(7320) ->  449 Load(7370) ->  381 Load(7420) ->  442 Load(7450) ->  386 Load(7500) ->  439 Load(7550) ->  438 Load(7600) ->  436 Load(7650) ->  437 Load(7700) ->  471 Load(7750) ->  435 Load(7800) ->  444 Load(7850) ->  446 Load(7900) ->  445 Load(7950) ->  434 Load(8000) ->  414 Load(8050) ->  415 Load(8100) ->  233 Load(8200) ->  402 Load(8250) ->  403 Load(8300) ->  472 Load(8350) ->  401 Load(8400) ->  396 Load(8500) ->  393 Load(8600) ->  397 Load(8650) ->  246 Load(8700) ->  404 Load(8750) ->  473 Load(8800) ->  405 Load(8850) ->  243 Load(8950) ->  379 Load(9050) ->  232 Load(9150) ->  384 Load(9200) ->  275 Load(9300) ->  380 Load(9400) ->  606 Load(9450) ->  375 Load(9550) ->  374 Load(9650) ->  512 Load(9680) ->  64 Load(9710) ->  578 Load(9810) ->  603 Load(9860) ->  357 Load(9960) ->  0 Load(9960)
+Distance of the route: 18586m
+Load of the route: 9960
+
+Route for vehicle 646:
+ 0 Load(0) ->  585 Load(50) ->  3 Load(100) ->  99 Load(200) ->  100 Load(250) ->  110 Load(350) ->  111 Load(450) ->  114 Load(550) ->  141 Load(650) ->  581 Load(700) ->  84 Load(800) ->  83 Load(850) ->  87 Load(950) ->  139 Load(1050) ->  25 Load(1150) ->  24 Load(1250) ->  23 Load(1350) ->  30 Load(1400) ->  27 Load(1500) ->  26 Load(1600) ->  14 Load(1700) ->  15 Load(1800) ->  20 Load(1850) ->  19 Load(1950) ->  16 Load(2000) ->  17 Load(2050) ->  18 Load(2150) ->  216 Load(2200) ->  129 Load(2300) ->  565 Load(2400) ->  138 Load(2430) ->  136 Load(2530) ->  121 Load(2580) ->  123 Load(2630) ->  63 Load(2680) ->  579 Load(2780) ->  50 Load(2830) ->  57 Load(2880) ->  60 Load(2930) ->  575 Load(2980) ->  49 Load(3030) ->  118 Load(3130) ->  119 Load(3230) ->  116 Load(3330) ->  206 Load(3430) ->  135 Load(3480) ->  131 Load(3580) ->  140 Load(3680) ->  254 Load(3780) ->  166 Load(3880) ->  543 Load(3930) ->  544 Load(3960) ->  161 Load(4010) ->  165 Load(4060) ->  147 Load(4160) ->  148 Load(4260) ->  149 Load(4310) ->  167 Load(4410) ->  150 Load(4510) ->  168 Load(4610) ->  366 Load(4710) ->  307 Load(4760) ->  306 Load(4810) ->  255 Load(4910) ->  542 Load(4960) ->  464 Load(5010) ->  221 Load(5110) ->  513 Load(5210) ->  225 Load(5310) ->  475 Load(5360) ->  599 Load(5410) ->  389 Load(5510) ->  463 Load(5560) ->  377 Load(5660) ->  376 Load(5760) ->  605 Load(5810) ->  392 Load(5910) ->  476 Load(6010) ->  305 Load(6110) ->  547 Load(6160) ->  157 Load(6260) ->  361 Load(6360) ->  506 Load(6410) ->  504 Load(6460) ->  365 Load(6560) ->  501 Load(6660) ->  360 Load(6760) ->  499 Load(6860) ->  253 Load(6960) ->  498 Load(7010) ->  252 Load(7110) ->  567 Load(7160) ->  250 Load(7260) ->  497 Load(7310) ->  314 Load(7360) ->  496 Load(7410) ->  303 Load(7510) ->  493 Load(7560) ->  500 Load(7610) ->  251 Load(7710) ->  492 Load(7760) ->  248 Load(7860) ->  491 Load(7910) ->  247 Load(8010) ->  490 Load(8110) ->  489 Load(8210) ->  245 Load(8310) ->  488 Load(8410) ->  532 Load(8510) ->  623 Load(8610) ->  524 Load(8710) ->  627 Load(8760) ->  526 Load(8810) ->  527 Load(8910) ->  528 Load(9010) ->  529 Load(9060) ->  530 Load(9110) ->  487 Load(9210) ->  531 Load(9260) ->  628 Load(9360) ->  296 Load(9410) ->  644 Load(9510) ->  0 Load(9510)
+Distance of the route: 17217m
+Load of the route: 9510
+
+Total distance of all routes: 109416m
+Total load of all routes: 47020
+[Finished in 63.359s]
+
+--------------------------------------------------------------------------
+
+From 139031m to 109416m. So the solution does improve someone. An integration curve would be interesting.
