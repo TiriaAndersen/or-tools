@@ -2693,3 +2693,573 @@ Total load of all routes: 47020
 --------------------------------------------------------------------------
 
 From 139031m to 109416m. So the solution does improve someone. An integration curve would be interesting.
+
+Okay, let's go back and investigate WHY getting the distances from arc directly in distance callback causes or-tools not to register the distance.
+Remember, this is what the buggy distance callback looks like:
+
+    def distance_callback(from_index, to_index):
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        print("from_node -> to_node: {} -> {} ".format(from_node, to_node))
+        if from_node == to_node:
+            distance = 0
+            print("from_node = to_node, distance 0")
+        else:
+            distance = (vrp_instance.arcs[from_node][to_node]).distance
+            print("extracted from arcs, distance" + distance)
+        return distance
+
+Which outputs:
+--------------------------------------------------------------------------
+
+NAME : Andersen_n8
+
+TYPE : CVRP
+
+DIMENSION : 8
+
+EDGE_WEIGHT_TYPE : EUC_2D
+
+CAPACITY : 30
+
+DEMAND_SECTION
+
+Node at location [10, 4] could not be added because demand 45 is greater than vehicle capacity 30
+Node at location [1, 1] could not be added because demand 35 is greater than vehicle capacity 30
+name = Andersen_n8
+Vehicle.capacity = 30
+Vehicle.variable_cost = 0.8
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 6
+arcs in instance: 30
+[[ 0.         13.92838828  9.8488578   1.          8.54400375 10.77032961]
+ [13.92838828  0.          9.8488578  13.60147051 10.44030651  3.16227766]
+ [ 9.8488578   9.8488578   0.          8.94427191  1.41421356  7.81024968]
+ [ 1.         13.60147051  8.94427191  0.          7.61577311 10.44030651]
+ [ 8.54400375 10.44030651  1.41421356  7.61577311  0.          8.06225775]
+ [10.77032961  3.16227766  7.81024968 10.44030651  8.06225775  0.        ]]
+from_node -> to_node: 0 -> 0
+from_node = to_node, distance 0
+from_node -> to_node: 0 -> 0
+from_node = to_node, distance 0
+from_node -> to_node: 0 -> 0
+from_node = to_node, distance 0
+from_node -> to_node: 0 -> 0
+from_node = to_node, distance 0
+from_node -> to_node: 0 -> 0
+from_node = to_node, distance 0
+from_node -> to_node: 1 -> 0
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 4:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 5:
+ 0 Load(0) ->  5 Load(25) ->  4 Load(45) ->  3 Load(60) ->  2 Load(75) ->  1 Load(80) ->  0 Load(80)
+Distance of the route: 0m
+Load of the route: 80
+
+Total distance of all routes: 0m
+Total load of all routes: 80
+[Finished in 1.628s]
+
+--------------------------------------------------------------------------
+
+I tried swapping around the if statement, to no effect.
+
+    def distance_callback(from_index, to_index):
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        print("from_node -> to_node: {} -> {} ".format(from_node, to_node))
+        if from_node == to_node:
+            distance = (vrp_instance.arcs[from_node][to_node]).distance
+            print("extracted from arcs, distance" + distance)
+        else:
+            distance = 0
+            print("from_node = to_node, distance 0")
+        return distance
+
+According to this discussion, callbacks are cached and called asynchronously.
+https://groups.google.com/g/or-tools-discuss/c/8DPt3lzE_oE/m/YjEZ4fu7BwAJ
+
+I give up. We'll just store distance_matrix = get_distance_matrix() in main and make the distance callback pull from there.
+I'll come back and deal with the whys if anything stuffs up later.
+
+Moving on. I want to write the solutions to file.
+
+First, I gotta figure out what solution format to use.
+A few options:
+
+Groer: 31 -21 31 19 17 13 7 26 -12 1 16 30 -27 24 -29 18 8 9 22 15 10 25 5 20 -14 28 11 4 23 3 2 6 0
+(-ves indicate return to depot)
+
+Unknown:
+Route #1: 582 459 436 181 42 34 368 235 390 57 425
+.
+Route #87: 812 801 787 289 385 357 302 740 332 64 315
+Cost 85469
+
+VRP-REP: XML schema
+CVRPLIB: Umkown or
+7591 (upper bound val)
+26 (num vehicles)
+113340 (?)
+6780 (?)
+ 0 1 1 783 191  5 0 31 46 35 0
+1 1 1 distance load num_nodes(incd. depot twice) 0 node_id ...node_id 0
+.
+ 0 1 1 897 201  8 0 24 95 73 53 33 32 0
+
+
+ Groer doesn't give the distance, I just want a .txt file so VRP-REP sounds like a pain in the ass.
+ I don't know what some of the numbers mean in the CVRPLIB format, so let's just go with the Unknown format that CVRPLIB also sometime uses. I can always change the format later. The solution file will have the same name as the problem, so it doesn't need all the problem info anyway.
+
+    def write_solution_file(vrp_instance, num_vehicles, manager, routing, solution):
+        """Writes solution to file."""
+        num_routes = 0
+        output = ''
+        for vehicle_id in range(num_vehicles):
+            index = routing.Start(vehicle_id)
+            node_sequence = ''
+            route_distance = 0
+            route_load = 0
+            index = solution.Value(routing.NextVar(index))
+            while not routing.IsEnd(index):
+                node_index = manager.IndexToNode(index)
+                route_load += vrp_instance.get_demands()[node_index]
+                node_sequence += ' {}'.format(node_index)
+                previous_index = index
+                index = solution.Value(routing.NextVar(index))
+                route_distance += routing.GetArcCostForVehicle(
+                    previous_index, index, vehicle_id)
+            if route_distance != 0:
+                num_routes += 1
+                route_line = 'Route #{}:'.format(num_routes)
+                # route_line += ' {}'.format(route_distance)
+                # route_line += ' {}'.format(route_load)
+                route_line += node_sequence + "\n"
+                output += route_lin
+        objective_val = solution.ObjectiveValue()
+        output += 'Cost {}'.format(objective_val)
+        file_name = vrp_instance.name
+        print(file_name)
+        solution_file = open("C:/Users/jc321076/github/" + file_name + "ortools.sol", mode='w')  # Create solution file (specify path file here)
+        solution_file.write(output)
+        solution_file.close()
+
+The function is based on print_solution with some modifications.
+I test it on Andersen_n8, X_n101_k25, and BOPMid_full_matrix; all work.
+As an example, I've copied the contents of Andersen_n8.sol :
+--------------------------------------------------------------------------
+
+Route #1: 1 5
+Route #2: 4
+Route #3: 3 2
+Cost 60
+
+--------------------------------------------------------------------------
+
+
+Okay, next I want to modify external_data_routing.py to solve VRPs with both load AND fuel capacities.
+I refer to get_capacitated_fuel_weed_instance_working_tests.txt as a basis.
+
+  def fuel_callback(from_index, to_index):
+      from_node = manager.IndexToNode(from_index)
+      to_node = manager.IndexToNode(to_index)
+      distance = distance_matrix[from_node][to_node]
+      fuel = vrp_instance.vehicle.fuel_consumption * distance
+      print(fuel)
+      return int(fuel)
+
+  fuel_callback_index = routing.RegisterUnaryTransitCallback(fuel_callback)
+  routing.AddDimension(
+      fuel_callback_index,
+      int(0),
+      vehicle_fuel_capacity,
+      True,
+      'Fuel')
+
+Which gives:
+--------------------------------------------------------------------------
+
+NAME : Andersen_n8
+
+TYPE : CVRP
+
+DIMENSION : 8
+
+EDGE_WEIGHT_TYPE : EUC_2D
+
+CAPACITY : 30
+
+DEMAND_SECTION
+
+Node at location [10, 4] could not be added because demand 45 is greater than vehicle capacity 30
+Node at location [1, 1] could not be added because demand 35 is greater than vehicle capacity 30
+name = Andersen_n8
+Vehicle.demand_capacity = 30
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 1
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 6
+arcs in instance: 30
+18
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  3 Load(15) ->  2 Load(30) ->  0 Load(30)
+Distance of the route: 0m
+Load of the route: 30
+
+Route for vehicle 4:
+ 0 Load(0) ->  4 Load(20) ->  0 Load(20)
+Distance of the route: 0m
+Load of the route: 20
+
+Route for vehicle 5:
+ 0 Load(0) ->  5 Load(25) ->  1 Load(30) ->  0 Load(30)
+Distance of the route: 0m
+Load of the route: 30
+
+Total distance of all routes: 0m
+Total load of all routes: 80
+[Finished in 1.724s]
+
+--------------------------------------------------------------------------
+
+
+Gahh it's doing the 0m distance thing again!!
+
+Ah. The fuel_callback has two inputs, so it shouldn't be RegisterUnaryTransitCallback (I think?). I tried:
+
+  fuel_callback_index = routing.RegisterTransitCallback(fuel_callback)
+
+And:
+--------------------------------------------------------------------------
+
+NAME : Andersen_n8
+
+TYPE : CVRP
+
+DIMENSION : 8
+
+EDGE_WEIGHT_TYPE : EUC_2D
+
+CAPACITY : 30
+
+DEMAND_SECTION
+
+Node at location [10, 4] could not be added because demand 45 is greater than vehicle capacity 30
+Node at location [1, 1] could not be added because demand 35 is greater than vehicle capacity 30
+name = Andersen_n8
+Vehicle.demand_capacity = 30
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 1
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 6
+arcs in instance: 30
+18
+Solver status:  2
+[Finished in 0.491s]
+
+--------------------------------------------------------------------------
+
+
+No solution. Hm.
+The original solution had 3 routes, distances 26, 16, 18m.
+The default fuel_capacity is 18L, at fuel_consumption of 1L/m
+Maybe the fuel_capacity isn't high enough for a valid solution.
+I manually increase it to a value higher than 26:
+
+    vehicle_fuel_capacity = 30
+
+And run again:
+--------------------------------------------------------------------------
+NAME : Andersen_n8
+
+TYPE : CVRP
+
+DIMENSION : 8
+
+EDGE_WEIGHT_TYPE : EUC_2D
+
+CAPACITY : 30
+
+DEMAND_SECTION
+
+Node at location [10, 4] could not be added because demand 45 is greater than vehicle capacity 30
+Node at location [1, 1] could not be added because demand 35 is greater than vehicle capacity 30
+name = Andersen_n8
+Vehicle.demand_capacity = 30
+Vehicle.fuel_capacity = 30
+Vehicle.fuel_consumption = 1
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 6
+arcs in instance: 30
+30
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 2:
+ 0 Load(0) ->  0 Load(0)
+Distance of the route: 0m
+Load of the route: 0
+
+Route for vehicle 3:
+ 0 Load(0) ->  5 Load(25) ->  1 Load(30) ->  0 Load(30)
+Distance of the route: 26m
+Load of the route: 30
+
+Route for vehicle 4:
+ 0 Load(0) ->  4 Load(20) ->  0 Load(20)
+Distance of the route: 16m
+Load of the route: 20
+
+Route for vehicle 5:
+ 0 Load(0) ->  3 Load(15) ->  2 Load(30) ->  0 Load(30)
+Distance of the route: 18m
+Load of the route: 30
+
+Total distance of all routes: 60m
+Total load of all routes: 80
+[Finished in 0.403s]
+
+--------------------------------------------------------------------------
+
+Yup it worked!
+Now let's reduce the fuel capacity to see a change in the solution, but still keeps feasibility:
+
+    vehicle_fuel_capacity = 25
+
+Hopefully.
+--------------------------------------------------------------------------
+NAME : Andersen_n8
+
+TYPE : CVRP
+
+DIMENSION : 8
+
+EDGE_WEIGHT_TYPE : EUC_2D
+
+CAPACITY : 30
+
+DEMAND_SECTION
+
+Node at location [10, 4] could not be added because demand 45 is greater than vehicle capacity 30
+Node at location [1, 1] could not be added because demand 35 is greater than vehicle capacity 30
+name = Andersen_n8
+Vehicle.demand_capacity = 30
+Vehicle.fuel_capacity = 25
+Vehicle.fuel_consumption = 1
+Depot.id = 0
+Depot.location = [0, 0]
+nodes in instance, including depot: 6
+arcs in instance: 30
+Solver status:  2
+[Finished in 0.622s]
+--------------------------------------------------------------------------
+
+
+Hup. Nope!
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
