@@ -1,5 +1,6 @@
-,NAME: BOPMid_full_matrix
+NAME: BOPMid_full_matrix
 TYPE: CVRP
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
 DIMENSION: 647
 CAPACITY: 80000
 EDGE_WEIGHT_TYPE: EXPLICIT
