@@ -3932,29 +3932,780 @@ which is an argument for print_solution() and write_simple_solution_file().
 
 I'm going to make an alternate solution format based on the CRVPLIB format.
 
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
---------------------------------------------------------------------------
+But first, a bug in BOPMid_full_matrix:
 --------------------------------------------------------------------------
 
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+EDGE_WEIGHT_SECTION true
+DEMAND_SECTION
+
+weights given =  True
+name = BOPMid_full_matrix
+Vehicle.demand_capacity = 10000
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 0.08
+Depot.id = 0
+Depot.location = [0, 0]
+edge weights given = True
+dimension 647
+arcs in instance: 417962
+[[    0.    1362.13  1257.11 ...     0.   36605.84 30021.17]
+ [ 1362.13     0.     591.42 ...     0.   35188.69 29549.85]
+ [ 1257.11   591.42     0.   ... 24497.06 35036.61 28803.41]
+ ...
+ [    0.       0.   24497.06 ...     0.   19515.43 29337.72]
+ [36605.84 35188.69 35036.61 ... 19515.43     0.   18250.97]
+ [30021.17 29549.85 28803.41 ... 29337.72 18250.97     0.  ]]
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) Distance(0.0) ->  285 Load(100) Distance(0.0) ->  0 Load(100) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 100
+
 --------------------------------------------------------------------------
+
+
+Weirdly the distance is 0m even through the route 0 has node 285.
+Ah. That is because the BOPMid_full_matrix distance matrix has 0 distance for arcs that don't exist.
+But vrp_instance interprets it as an arc between two nodes in the same spot.
+
+Let's try fix this by not registering arcs if the distance is 0, except for arcs from nodes to itself.
+else:  # arc_distances inputted
+    self.edge_weights_given = True
+    for existing_node in self.nodes:
+        arc_distance = arc_distances[existing_node.id]
+        if float(arc_distance) != 0.0:  # 0 != 0.0, so convert to float incase arc_distance is integer
+            new_arc = Arc(existing_node, new_node, arc_distances[existing_node.id])
+            new_arc_sym = Arc(new_node, existing_node, arc_distances[existing_node.id])
+            # print(new_arc.__str__())
+            self.arcs[new_arc.origin.id][new_arc.destination.id] = new_arc
+            self.arcs[new_arc.destination.id][new_arc.origin.id] = new_arc_sym
+        else:
+            print("did no register arc {}->{} distance: {} ".format(existing_node.id, new_node.id, arc_distance))
 --------------------------------------------------------------------------
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+EDGE_WEIGHT_SECTION true
+DEMAND_SECTION
+
+weights given =  True
+did no register arc 25->59 distance: 0.0
+did no register arc 32->59 distance: 0.0
+did no register arc 33->59 distance: 0.0
+did no register arc 25->60 distance: 0.0
+did no register arc 32->60 distance: 0.0
+.
+did no register arc 166->254 distance: 0.0
+did no register arc 0->285 distance: 0.0
+did no register arc 1->285 distance: 0.0
+did no register arc 270->285 distance: 0.0
+did no register arc 271->285 distance: 0.0
+did no register arc 0->287 distance: 0.0
+did no register arc 1->287 distance: 0.0
+did no register arc 270->287 distance: 0.0
+did no register arc 271->287 distance: 0.0
+.
+did no register arc 420->646 distance: 0.0
+did no register arc 456->646 distance: 0.0
+did no register arc 463->646 distance: 0.0
+did no register arc 464->646 distance: 0.0
+did no register arc 465->646 distance: 0.0
+did no register arc 469->646 distance: 0.0
+did no register arc 512->646 distance: 0.0
+did no register arc 553->646 distance: 0.0
+did no register arc 585->646 distance: 0.0
+name = BOPMid_full_matrix
+Vehicle.demand_capacity = 10000
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 0.08
+Depot.id = 0
+Depot.location = [0, 0]
+edge weights given = True
+dimension 647
+arcs in instance: 388646
+[[    0.    1362.13  1257.11 ...     0.   36605.84 30021.17]
+ [ 1362.13     0.     591.42 ...     0.   35188.69 29549.85]
+ [ 1257.11   591.42     0.   ... 24497.06 35036.61 28803.41]
+ ...
+ [    0.       0.   24497.06 ...     0.   19515.43 29337.72]
+ [36605.84 35188.69 35036.61 ... 19515.43     0.   18250.97]
+ [30021.17 29549.85 28803.41 ... 29337.72 18250.97     0.  ]]
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) Distance(0.0) ->  285 Load(100) Distance(0.0) ->  0 Load(100) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 100
+
+Route for vehicle 1:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+.
+.
+
+Route for vehicle 641:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+
+Route for vehicle 642:
+ 0 Load(0) Distance(0.0) ->  540 Load(50) Distance(0.0) ->  271 Load(100) Distance(0.0) ->  302 Load(200) Distance(0.0) ->  270 Load(250) Distance(0.0) ->  292 Load(280) Distance(0.0) ->  639 Load(330) Distance(0.0) ->  295 Load(360) Distance(0.0) ->  301 Load(390) Distance(0.0) ->  293 Load(440) Distance(0.0) ->  1 Load(540) Distance(0.0) ->  287 Load(640) Distance(141.42) ->  286 Load(740) Distance(141.42) ->  469 Load(790) Distance(141.42) ->  642 Load(840) Distance(141.42) ->  587 Load(890) Distance(141.42) ->  641 Load(940) Distance(141.42) ->  626 Load(1040) Distance(141.42) ->  533 Load(1090) Distance(191.42) ->  630 Load(1190) Distance(241.42) ->  635 Load(1290) Distance(291.41999999999996) ->  636 Load(1340) Distance(291.41999999999996) ->  624 Load(1440) Distance(341.41999999999996) ->  621 Load(1540) Distance(941.42) ->  486 Load(1640) Distance(2060.66) ->  483 Load(1740) Distance(2372.79) ->  481 Load(1840) Distance(2926.34) ->  480 Load(1940) Distance(2926.34) ->  585 Load(1990) Distance(2926.34) ->  18 Load(2090) Distance(2976.34) ->  17 Load(2140) Distance(3047.05) ->  16 Load(2190) Distance(3167.76) ->  19 Load(2290) Distance(3217.76) ->  20 Load(2340) Distance(3267.76) ->  15 Load(2440) Distance(3267.76) ->  216 Load(2490) Distance(3267.76) ->  122 Load(2540) Distance(3367.76) ->  121 Load(2590) Distance(3417.76) ->  123 Load(2640) Distance(3688.4700000000003) ->  63 Load(2690) Distance(3688.4700000000003) ->  579 Load(2790) Distance(3688.4700000000003) ->  49 Load(2840) Distance(3929.8900000000003) ->  118 Load(2940) Distance(4050.6000000000004) ->  119 Load(3040) Distance(4100.6) ->  116 Load(3140) Distance(4350.6) ->  38 Load(3240) Distance(4600.6) ->  47 Load(3290) Distance(4650.6) ->  48 Load(3340) Distance(4700.6) ->  46 Load(3390) Distance(4700.6) ->  203 Load(3490) Distance(4700.6) ->  79 Load(3590) Distance(5000.6) ->  95 Load(3690) Distance(5071.31) ->  96 Load(3740) Distance(5192.02) ->  97 Load(3840) Distance(5524.860000000001) ->  91 Load(3940) Distance(5574.860000000001) ->  92 Load(3990) Distance(5645.570000000001) ->  108 Load(4040) Distance(5695.570000000001) ->  93 Load(4140) Distance(5745.570000000001) ->  90 Load(4190) Distance(5866.280000000001) ->  89 Load(4240) Distance(5936.990000000001) ->  94 Load(4290) Distance(6036.990000000001) ->  109 Load(4340) Distance(6036.990000000001) ->  128 Load(4390) Distance(6036.990000000001) ->  176 Load(4440) Distance(6036.990000000001) ->  464 Load(4490) Distance(6036.990000000001) ->  257 Load(4590) Distance(6086.990000000001) ->  256 Load(4690) Distance(7402.68) ->  269 Load(4790) Distance(7802.68) ->  268 Load(4890) Distance(8064.81) ->  266 Load(4990) Distance(8559.78) ->  267 Load(5090) Distance(9059.78) ->  265 Load(5190) Distance(9509.78) ->  264 Load(5290) Distance(9680.49) ->  262 Load(5390) Distance(9780.49) ->  260 Load(5490) Distance(9971.91) ->  272 Load(5540) Distance(10192.619999999999) ->  263 Load(5640) Distance(10292.619999999999) ->  261 Load(5740) Distance(10925.46) ->  273 Load(5840) Distance(12775.46) ->  611 Load(5940) Distance(12775.46) ->  478 Load(6040) Distance(12775.46) ->  300 Load(6140) Distance(13275.46) ->  299 Load(6240) Distance(13275.46) ->  477 Load(6340) Distance(13275.46) ->  304 Load(6440) Distance(13275.46) ->  390 Load(6540) Distance(13275.46) ->  309 Load(6590) Distance(13375.46) ->  308 Load(6690) Distance(13375.46) ->  553 Load(6790) Distance(13375.46) ->  503 Load(6840) Distance(13646.169999999998) ->  494 Load(6940) Distance(13866.879999999997) ->  507 Load(6990) Distance(13866.879999999997) ->  634 Load(7090) Distance(13866.879999999997) ->  451 Load(7190) Distance(13866.879999999997) ->  249 Load(7290) Distance(13866.879999999997) ->  453 Load(7340) Distance(13866.879999999997) ->  236 Load(7390) Distance(13866.879999999997) ->  460 Load(7490) Distance(13916.879999999997) ->  398 Load(7590) Distance(13987.589999999997) ->  459 Load(7640) Distance(14037.589999999997) ->  458 Load(7690) Distance(14158.299999999996) ->  416 Load(7740) Distance(14229.009999999995) ->  417 Load(7790) Distance(14299.719999999994) ->  412 Load(7840) Distance(14420.429999999993) ->  404 Load(7890) Distance(14491.139999999992) ->  473 Load(7940) Distance(14541.139999999992) ->  405 Load(7990) Distance(14541.139999999992) ->  594 Load(8040) Distance(17871.039999999994) ->  570 Load(8090) Distance(17991.749999999993) ->  571 Load(8190) Distance(18362.459999999992) ->  572 Load(8240) Distance(18362.459999999992) ->  356 Load(8340) Distance(18362.459999999992) ->  225 Load(8440) Distance(18362.459999999992) ->  513 Load(8540) Distance(18362.459999999992) ->  221 Load(8640) Distance(18362.459999999992) ->  465 Load(8670) Distance(18362.459999999992) ->  111 Load(8770) Distance(18412.459999999992) ->  110 Load(8870) Distance(18512.459999999992) ->  100 Load(8920) Distance(18733.16999999999) ->  101 Load(8970) Distance(18833.16999999999) ->  102 Load(9020) Distance(18833.16999999999) ->  566 Load(9120) Distance(18833.16999999999) ->  106 Load(9170) Distance(18833.16999999999) ->  76 Load(9270) Distance(18833.16999999999) ->  224 Load(9370) Distance(18833.16999999999) ->  24 Load(9470) Distance(19174.58999999999) ->  21 Load(9570) Distance(19174.58999999999) ->  199 Load(9620) Distance(19174.58999999999) ->  4 Load(9720) Distance(19174.58999999999) ->  193 Load(9770) Distance(19174.58999999999) ->  7 Load(9870) Distance(19224.58999999999) ->  5 Load(9970) Distance(22678.74999999999) ->  0 Load(9970) Distance(22678.74999999999)
+Distance of the route: 22678.74999999999m
+Load of the route: 9970
+
+Route for vehicle 643:
+ 0 Load(0) Distance(1257.11) ->  2 Load(100) Distance(1257.11) ->  575 Load(150) Distance(1257.11) ->  50 Load(200) Distance(1519.2399999999998) ->  57 Load(250) Distance(1619.2399999999998) ->  60 Load(300) Distance(1619.2399999999998) ->  206 Load(400) Distance(1619.2399999999998) ->  84 Load(500) Distance(1619.2399999999998) ->  581 Load(550) Distance(1619.2399999999998) ->  114 Load(650) Distance(1669.2399999999998) ->  141 Load(750) Distance(3088.4799999999996) ->  164 Load(800) Distance(5328.429999999999) ->  166 Load(900) Distance(7021.929999999999) ->  162 Load(950) Distance(7671.929999999999) ->  163 Load(1000) Distance(10589.699999999999) ->  352 Load(1050) Distance(11489.699999999999) ->  353 Load(1150) Distance(11660.409999999998) ->  354 Load(1200) Distance(11660.409999999998) ->  196 Load(1300) Distance(11660.409999999998) ->  319 Load(1350) Distance(11710.409999999998) ->  320 Load(1450) Distance(11781.119999999997) ->  321 Load(1500) Distance(12963.959999999997) ->  614 Load(1550) Distance(13063.959999999997) ->  615 Load(1600) Distance(13113.959999999997) ->  616 Load(1650) Distance(13921.069999999998) ->  613 Load(1700) Distance(16048.889999999998) ->  391 Load(1800) Distance(16893.859999999997) ->  369 Load(1900) Distance(16893.859999999997) ->  227 Load(1950) Distance(16893.859999999997) ->  368 Load(2050) Distance(16893.859999999997) ->  229 Load(2150) Distance(16893.859999999997) ->  367 Load(2250) Distance(16893.859999999997) ->  597 Load(2300) Distance(16893.859999999997) ->  474 Load(2350) Distance(16893.859999999997) ->  538 Load(2400) Distance(16893.859999999997) ->  518 Load(2450) Distance(16893.859999999997) ->  580 Load(2500) Distance(16893.859999999997) ->  519 Load(2550) Distance(17155.989999999998) ->  521 Load(2650) Distance(17205.989999999998) ->  522 Load(2750) Distance(17326.699999999997) ->  520 Load(2800) Distance(18309.539999999997) ->  535 Load(2850) Distance(18459.539999999997) ->  534 Load(2900) Distance(18950.959999999995) ->  640 Load(2950) Distance(18950.959999999995) ->  584 Load(3000) Distance(18950.959999999995) ->  618 Load(3050) Distance(18950.959999999995) ->  583 Load(3100) Distance(18950.959999999995) ->  539 Load(3150) Distance(18950.959999999995) ->  608 Load(3200) Distance(18950.959999999995) ->  607 Load(3250) Distance(18950.959999999995) ->  638 Load(3300) Distance(20721.669999999995) ->  637 Load(3400) Distance(20721.669999999995) ->  420 Load(3430) Distance(20721.669999999995) ->  485 Load(3530) Distance(21204.509999999995) ->  631 Load(3630) Distance(21204.509999999995) ->  586 Load(3680) Distance(21204.509999999995) ->  632 Load(3780) Distance(21254.509999999995) ->  629 Load(3880) Distance(21304.509999999995) ->  622 Load(3980) Distance(21354.509999999995) ->  625 Load(4080) Distance(21354.509999999995) ->  525 Load(4180) Distance(21354.509999999995) ->  620 Load(4280) Distance(21354.509999999995) ->  536 Load(4330) Distance(21354.509999999995) ->  574 Load(4430) Distance(21354.509999999995) ->  385 Load(4530) Distance(21354.509999999995) ->  593 Load(4580) Distance(21354.509999999995) ->  333 Load(4630) Distance(21454.509999999995) ->  334 Load(4680) Distance(21454.509999999995) ->  563 Load(4730) Distance(21454.509999999995) ->  336 Load(4780) Distance(21454.509999999995) ->  564 Load(4830) Distance(21454.509999999995) ->  546 Load(4880) Distance(21454.509999999995) ->  558 Load(4930) Distance(21454.509999999995) ->  610 Load(4980) Distance(21504.509999999995) ->  326 Load(5080) Distance(21504.509999999995) ->  556 Load(5130) Distance(21504.509999999995) ->  324 Load(5180) Distance(21604.509999999995) ->  325 Load(5230) Distance(23466.639999999996) ->  322 Load(5280) Distance(23516.639999999996) ->  323 Load(5330) Distance(23516.639999999996) ->  192 Load(5380) Distance(23516.639999999996) ->  318 Load(5430) Distance(23566.639999999996) ->  317 Load(5480) Distance(23566.639999999996) ->  200 Load(5580) Distance(23566.639999999996) ->  316 Load(5630) Distance(23616.639999999996) ->  315 Load(5730) Distance(25542.989999999994) ->  310 Load(5830) Distance(25542.989999999994) ->  194 Load(5880) Distance(25542.989999999994) ->  312 Load(5930) Distance(26491.519999999993) ->  311 Load(6030) Distance(26991.519999999993) ->  313 Load(6080) Distance(26991.519999999993) ->  191 Load(6180) Distance(26991.519999999993) ->  331 Load(6280) Distance(26991.519999999993) ->  561 Load(6330) Distance(26991.519999999993) ->  332 Load(6380) Distance(27812.229999999992) ->  337 Load(6430) Distance(28732.93999999999) ->  341 Load(6480) Distance(29636.48999999999) ->  343 Load(6530) Distance(29936.48999999999) ->  342 Load(6580) Distance(30764.30999999999) ->  344 Load(6680) Distance(31064.30999999999) ->  345 Load(6710) Distance(32014.30999999999) ->  340 Load(6810) Distance(32155.72999999999) ->  346 Load(6860) Distance(32226.439999999988) ->  347 Load(6910) Distance(33097.14999999999) ->  349 Load(6940) Distance(33983.54999999999) ->  351 Load(6990) Distance(34574.96999999999) ->  350 Load(7040) Distance(34695.679999999986) ->  348 Load(7140) Distance(34695.679999999986) ->  197 Load(7240) Distance(34695.679999999986) ->  355 Load(7290) Distance(35687.099999999984) ->  208 Load(7390) Distance(36887.099999999984) ->  209 Load(7490) Distance(37269.93999999998) ->  548 Load(7540) Distance(37632.06999999998) ->  210 Load(7640) Distance(38694.199999999975) ->  204 Load(7740) Distance(38744.199999999975) ->  205 Load(7840) Distance(38744.199999999975) ->  645 Load(7940) Distance(38744.199999999975) ->  211 Load(8040) Distance(38744.199999999975) ->  517 Load(8090) Distance(38864.909999999974) ->  515 Load(8140) Distance(38964.909999999974) ->  516 Load(8190) Distance(40084.14999999997) ->  475 Load(8240) Distance(40084.14999999997) ->  598 Load(8290) Distance(40134.14999999997) ->  599 Load(8340) Distance(42336.229999999974) ->  389 Load(8440) Distance(43414.049999999974) ->  361 Load(8540) Distance(43414.049999999974) ->  358 Load(8640) Distance(45103.99999999997) ->  600 Load(8740) Distance(45103.99999999997) ->  463 Load(8790) Distance(45103.99999999997) ->  54 Load(8840) Distance(45153.99999999997) ->  55 Load(8940) Distance(45274.70999999997) ->  43 Load(8990) Distance(45395.41999999997) ->  42 Load(9040) Distance(45586.83999999997) ->  44 Load(9090) Distance(45636.83999999997) ->  45 Load(9140) Distance(45636.83999999997) ->  98 Load(9240) Distance(45636.83999999997) ->  124 Load(9290) Distance(45707.54999999997) ->  74 Load(9340) Distance(45828.259999999966) ->  40 Load(9390) Distance(45898.969999999965) ->  35 Load(9490) Distance(45969.679999999964) ->  36 Load(9540) Distance(46040.38999999996) ->  37 Load(9590) Distance(46040.38999999996) ->  218 Load(9690) Distance(46040.38999999996) ->  0 Load(9690) Distance(46040.38999999996)
+Distance of the route: 46040.38999999996m
+Load of the route: 9690
+
+Route for vehicle 644:
+ 0 Load(0) Distance(553.55) ->  3 Load(50) Distance(553.55) ->  99 Load(150) Distance(553.55) ->  130 Load(200) Distance(553.55) ->  549 Load(300) Distance(553.55) ->  9 Load(400) Distance(553.55) ->  554 Load(450) Distance(553.55) ->  335 Load(500) Distance(553.55) ->  359 Load(600) Distance(553.55) ->  258 Load(650) Distance(603.55) ->  259 Load(750) Distance(2131.37) ->  306 Load(800) Distance(3521.3199999999997) ->  542 Load(850) Distance(3571.3199999999997) ->  255 Load(950) Distance(4549.139999999999) ->  307 Load(1000) Distance(4549.139999999999) ->  366 Load(1100) Distance(4549.139999999999) ->  168 Load(1200) Distance(5726.959999999999) ->  601 Load(1230) Distance(5726.959999999999) ->  559 Load(1280) Distance(5726.959999999999) ->  327 Load(1380) Distance(5776.959999999999) ->  329 Load(1480) Distance(5826.959999999999) ->  330 Load(1580) Distance(5826.959999999999) ->  588 Load(1680) Distance(5826.959999999999) ->  339 Load(1780) Distance(6026.959999999999) ->  609 Load(1830) Distance(6026.959999999999) ->  186 Load(1930) Distance(6680.509999999999) ->  185 Load(2030) Distance(7375.48) ->  187 Load(2130) Distance(7425.48) ->  189 Load(2230) Distance(7475.48) ->  190 Load(2330) Distance(7475.48) ->  555 Load(2380) Distance(7475.48) ->  328 Load(2430) Distance(7475.48) ->  557 Load(2480) Distance(7475.48) ->  188 Load(2580) Distance(7475.48) ->  222 Load(2680) Distance(7475.48) ->  177 Load(2730) Distance(7475.48) ->  220 Load(2830) Distance(7475.48) ->  180 Load(2880) Distance(7666.9) ->  181 Load(2930) Distance(7887.61) ->  179 Load(2980) Distance(7937.61) ->  178 Load(3030) Distance(8270.449999999999) ->  182 Load(3130) Distance(8341.159999999998) ->  183 Load(3180) Distance(8582.579999999998) ->  175 Load(3230) Distance(8582.579999999998) ->  223 Load(3280) Distance(8582.579999999998) ->  214 Load(3380) Distance(8632.579999999998) ->  215 Load(3430) Distance(8632.579999999998) ->  226 Load(3530) Distance(8632.579999999998) ->  88 Load(3630) Distance(8682.579999999998) ->  87 Load(3730) Distance(8682.579999999998) ->  139 Load(3830) Distance(8682.579999999998) ->  25 Load(3930) Distance(8682.579999999998) ->  195 Load(4030) Distance(8682.579999999998) ->  170 Load(4080) Distance(8682.579999999998) ->  198 Load(4130) Distance(8682.579999999998) ->  184 Load(4230) Distance(8903.289999999997) ->  174 Load(4280) Distance(8903.289999999997) ->  560 Load(4380) Distance(8903.289999999997) ->  171 Load(4480) Distance(8903.289999999997) ->  568 Load(4530) Distance(8903.289999999997) ->  172 Load(4630) Distance(8903.289999999997) ->  231 Load(4730) Distance(8903.289999999997) ->  551 Load(4830) Distance(8903.289999999997) ->  569 Load(4930) Distance(8903.289999999997) ->  505 Load(4980) Distance(8953.289999999997) ->  495 Load(5080) Distance(8953.289999999997) ->  590 Load(5130) Distance(8953.289999999997) ->  508 Load(5180) Distance(9165.419999999996) ->  502 Load(5230) Distance(9165.419999999996) ->  591 Load(5280) Distance(9165.419999999996) ->  509 Load(5330) Distance(9165.419999999996) ->  364 Load(5430) Distance(9165.419999999996) ->  510 Load(5480) Distance(9165.419999999996) ->  237 Load(5530) Distance(9165.419999999996) ->  511 Load(5580) Distance(9165.419999999996) ->  595 Load(5630) Distance(9165.419999999996) ->  377 Load(5730) Distance(9165.419999999996) ->  605 Load(5780) Distance(9165.419999999996) ->  392 Load(5880) Distance(9165.419999999996) ->  476 Load(5980) Distance(9165.419999999996) ->  305 Load(6080) Distance(10915.419999999996) ->  547 Load(6130) Distance(11968.969999999996) ->  157 Load(6230) Distance(12018.969999999996) ->  158 Load(6280) Distance(12018.969999999996) ->  592 Load(6330) Distance(12018.969999999996) ->  338 Load(6430) Distance(12018.969999999996) ->  589 Load(6530) Distance(12018.969999999996) ->  159 Load(6580) Distance(12018.969999999996) ->  103 Load(6630) Distance(12018.969999999996) ->  145 Load(6730) Distance(12368.969999999996) ->  144 Load(6830) Distance(12639.679999999995) ->  169 Load(6930) Distance(13917.499999999995) ->  545 Load(7030) Distance(13967.499999999995) ->  143 Load(7130) Distance(15441.759999999995) ->  113 Load(7230) Distance(15491.759999999995) ->  112 Load(7330) Distance(15541.759999999995) ->  115 Load(7430) Distance(15541.759999999995) ->  202 Load(7530) Distance(15541.759999999995) ->  105 Load(7580) Distance(15691.759999999995) ->  104 Load(7630) Distance(15741.759999999995) ->  133 Load(7680) Distance(15741.759999999995) ->  80 Load(7780) Distance(15741.759999999995) ->  126 Load(7830) Distance(15741.759999999995) ->  78 Load(7930) Distance(15741.759999999995) ->  125 Load(7980) Distance(15741.759999999995) ->  77 Load(8080) Distance(15741.759999999995) ->  134 Load(8130) Distance(15791.759999999995) ->  107 Load(8180) Distance(15791.759999999995) ->  75 Load(8280) Distance(15791.759999999995) ->  602 Load(8310) Distance(15791.759999999995) ->  137 Load(8360) Distance(15791.759999999995) ->  83 Load(8410) Distance(15791.759999999995) ->  33 Load(8460) Distance(15791.759999999995) ->  82 Load(8510) Distance(15841.759999999995) ->  81 Load(8610) Distance(15962.469999999994) ->  71 Load(8660) Distance(16083.179999999993) ->  70 Load(8710) Distance(16153.889999999992) ->  65 Load(8760) Distance(16274.599999999991) ->  69 Load(8810) Distance(16324.599999999991) ->  68 Load(8860) Distance(16424.59999999999) ->  67 Load(8910) Distance(16474.59999999999) ->  66 Load(8960) Distance(16474.59999999999) ->  86 Load(9010) Distance(16474.59999999999) ->  72 Load(9110) Distance(16545.30999999999) ->  127 Load(9160) Distance(16545.30999999999) ->  85 Load(9260) Distance(16545.30999999999) ->  73 Load(9310) Distance(16545.30999999999) ->  32 Load(9410) Distance(16545.30999999999) ->  62 Load(9460) Distance(16616.01999999999) ->  61 Load(9510) Distance(16686.72999999999) ->  59 Load(9560) Distance(16736.72999999999) ->  58 Load(9610) Distance(16836.72999999999) ->  56 Load(9660) Distance(16907.439999999988) ->  53 Load(9710) Distance(16957.439999999988) ->  52 Load(9760) Distance(17057.439999999988) ->  120 Load(9810) Distance(17107.439999999988) ->  117 Load(9860) Distance(17178.149999999987) ->  51 Load(9910) Distance(17178.149999999987) ->  582 Load(9960) Distance(17178.149999999987) ->  0 Load(9960) Distance(17178.149999999987)
+Distance of the route: 17178.149999999987m
+Load of the route: 9960
+
+Route for vehicle 645:
+ 0 Load(0) Distance(0.0) ->  643 Load(50) Distance(1124.26) ->  288 Load(150) Distance(1386.3899999999999) ->  289 Load(250) Distance(2622.79) ->  281 Load(350) Distance(2984.92) ->  282 Load(450) Distance(3855.63) ->  280 Load(550) Distance(3955.63) ->  279 Load(650) Distance(4429.89) ->  278 Load(750) Distance(4479.89) ->  277 Load(850) Distance(7240.55) ->  284 Load(950) Distance(8323.39) ->  294 Load(1000) Distance(8323.39) ->  276 Load(1100) Distance(8323.39) ->  290 Load(1150) Distance(8373.39) ->  291 Load(1180) Distance(9937.599999999999) ->  283 Load(1280) Distance(10037.599999999999) ->  541 Load(1330) Distance(10037.599999999999) ->  633 Load(1380) Distance(10037.599999999999) ->  298 Load(1480) Distance(11079.019999999999) ->  297 Load(1580) Distance(11079.019999999999) ->  11 Load(1680) Distance(11079.019999999999) ->  562 Load(1730) Distance(11079.019999999999) ->  201 Load(1830) Distance(11079.019999999999) ->  244 Load(1930) Distance(11079.019999999999) ->  454 Load(1980) Distance(11249.729999999998) ->  452 Load(2080) Distance(11249.729999999998) ->  362 Load(2180) Distance(11249.729999999998) ->  395 Load(2230) Distance(11491.149999999998) ->  394 Load(2330) Distance(11491.149999999998) ->  425 Load(2430) Distance(11491.149999999998) ->  397 Load(2480) Distance(11541.149999999998) ->  393 Load(2580) Distance(11661.859999999997) ->  461 Load(2630) Distance(11711.859999999997) ->  396 Load(2730) Distance(11761.859999999997) ->  401 Load(2780) Distance(11811.859999999997) ->  472 Load(2830) Distance(11861.859999999997) ->  403 Load(2880) Distance(11961.859999999997) ->  402 Load(2930) Distance(11961.859999999997) ->  243 Load(3030) Distance(11961.859999999997) ->  380 Load(3130) Distance(12032.569999999996) ->  379 Load(3230) Distance(12032.569999999996) ->  232 Load(3330) Distance(12032.569999999996) ->  376 Load(3430) Distance(12032.569999999996) ->  606 Load(3480) Distance(12032.569999999996) ->  384 Load(3530) Distance(12032.569999999996) ->  275 Load(3630) Distance(12032.569999999996) ->  375 Load(3730) Distance(12082.569999999996) ->  374 Load(3830) Distance(12698.259999999997) ->  370 Load(3930) Distance(12698.259999999997) ->  482 Load(4030) Distance(12698.259999999997) ->  612 Load(4080) Distance(12698.259999999997) ->  448 Load(4130) Distance(12698.259999999997) ->  382 Load(4180) Distance(12698.259999999997) ->  440 Load(4230) Distance(12698.259999999997) ->  371 Load(4330) Distance(12698.259999999997) ->  442 Load(4360) Distance(12698.259999999997) ->  383 Load(4410) Distance(12698.259999999997) ->  439 Load(4460) Distance(12748.259999999997) ->  441 Load(4490) Distance(12748.259999999997) ->  373 Load(4590) Distance(12748.259999999997) ->  449 Load(4640) Distance(12748.259999999997) ->  381 Load(4690) Distance(12748.259999999997) ->  443 Load(4740) Distance(12748.259999999997) ->  386 Load(4790) Distance(12748.259999999997) ->  466 Load(4840) Distance(12798.259999999997) ->  467 Load(4870) Distance(12898.259999999997) ->  447 Load(4920) Distance(12968.969999999996) ->  457 Load(4970) Distance(13068.969999999996) ->  424 Load(5070) Distance(13139.679999999995) ->  423 Load(5170) Distance(13210.389999999994) ->  455 Load(5220) Distance(13210.389999999994) ->  239 Load(5270) Distance(13210.389999999994) ->  438 Load(5320) Distance(13260.389999999994) ->  471 Load(5370) Distance(13310.389999999994) ->  436 Load(5420) Distance(13360.389999999994) ->  437 Load(5470) Distance(13481.099999999993) ->  435 Load(5520) Distance(13551.809999999992) ->  444 Load(5570) Distance(13601.809999999992) ->  446 Load(5620) Distance(13672.519999999991) ->  445 Load(5670) Distance(13772.519999999991) ->  434 Load(5720) Distance(13922.519999999991) ->  415 Load(5770) Distance(13993.22999999999) ->  414 Load(5820) Distance(14063.93999999999) ->  410 Load(5870) Distance(14113.93999999999) ->  409 Load(5920) Distance(14163.93999999999) ->  408 Load(6020) Distance(14284.649999999989) ->  411 Load(6070) Distance(14334.649999999989) ->  407 Load(6120) Distance(14384.649999999989) ->  406 Load(6170) Distance(14384.649999999989) ->  363 Load(6270) Distance(14384.649999999989) ->  413 Load(6320) Distance(14384.649999999989) ->  246 Load(6370) Distance(14384.649999999989) ->  399 Load(6420) Distance(14434.649999999989) ->  400 Load(6520) Distance(14434.649999999989) ->  233 Load(6620) Distance(14434.649999999989) ->  462 Load(6650) Distance(14505.359999999988) ->  433 Load(6700) Distance(14655.359999999988) ->  470 Load(6750) Distance(14655.359999999988) ->  242 Load(6850) Distance(14655.359999999988) ->  173 Load(6950) Distance(14655.359999999988) ->  552 Load(7000) Distance(14655.359999999988) ->  240 Load(7100) Distance(14655.359999999988) ->  431 Load(7150) Distance(14755.359999999988) ->  432 Load(7200) Distance(14755.359999999988) ->  234 Load(7300) Distance(14755.359999999988) ->  422 Load(7350) Distance(14805.359999999988) ->  421 Load(7400) Distance(14805.359999999988) ->  387 Load(7450) Distance(14805.359999999988) ->  468 Load(7500) Distance(14855.359999999988) ->  430 Load(7550) Distance(14855.359999999988) ->  388 Load(7650) Distance(14855.359999999988) ->  418 Load(7700) Distance(14905.359999999988) ->  419 Load(7750) Distance(14905.359999999988) ->  274 Load(7800) Distance(14905.359999999988) ->  426 Load(7850) Distance(14905.359999999988) ->  235 Load(7900) Distance(14905.359999999988) ->  427 Load(8000) Distance(15026.069999999987) ->  450 Load(8050) Distance(15296.779999999986) ->  429 Load(8150) Distance(15346.779999999986) ->  428 Load(8250) Distance(15846.779999999986) ->  479 Load(8350) Distance(15967.489999999985) ->  646 Load(8450) Distance(16250.329999999985) ->  617 Load(8550) Distance(16945.299999999985) ->  619 Load(8650) Distance(16995.299999999985) ->  484 Load(8750) Distance(16995.299999999985) ->  512 Load(8780) Distance(16995.299999999985) ->  64 Load(8810) Distance(16995.299999999985) ->  578 Load(8910) Distance(16995.299999999985) ->  604 Load(8960) Distance(17066.009999999984) ->  603 Load(9010) Distance(17066.009999999984) ->  357 Load(9110) Distance(17066.009999999984) ->  0 Load(9110) Distance(17066.009999999984)
+Distance of the route: 17066.009999999984m
+Load of the route: 9110
+
+Route for vehicle 646:
+ 0 Load(0) Distance(3542.03) ->  6 Load(100) Distance(3542.03) ->  241 Load(200) Distance(3542.03) ->  550 Load(300) Distance(3542.03) ->  8 Load(400) Distance(3542.03) ->  238 Load(450) Distance(3542.03) ->  10 Load(550) Distance(3542.03) ->  230 Load(650) Distance(3542.03) ->  12 Load(750) Distance(4157.72) ->  22 Load(850) Distance(4207.72) ->  23 Load(950) Distance(4207.72) ->  252 Load(1050) Distance(4207.72) ->  567 Load(1100) Distance(4207.72) ->  250 Load(1200) Distance(4207.72) ->  13 Load(1300) Distance(4357.72) ->  14 Load(1400) Distance(4357.72) ->  456 Load(1450) Distance(4357.72) ->  523 Load(1480) Distance(4357.72) ->  577 Load(1530) Distance(4357.72) ->  207 Load(1630) Distance(4649.14) ->  213 Load(1730) Distance(4869.85) ->  212 Load(1780) Distance(4869.85) ->  576 Load(1880) Distance(4869.85) ->  142 Load(1980) Distance(4869.85) ->  219 Load(2030) Distance(4869.85) ->  378 Load(2130) Distance(4869.85) ->  228 Load(2230) Distance(4869.85) ->  372 Load(2280) Distance(4869.85) ->  537 Load(2380) Distance(4869.85) ->  514 Load(2480) Distance(4869.85) ->  217 Load(2580) Distance(4869.85) ->  39 Load(2630) Distance(4869.85) ->  136 Load(2730) Distance(4869.85) ->  138 Load(2760) Distance(4869.85) ->  565 Load(2860) Distance(4869.85) ->  129 Load(2960) Distance(5011.27) ->  31 Load(3010) Distance(5111.27) ->  28 Load(3060) Distance(5352.6900000000005) ->  30 Load(3110) Distance(5523.400000000001) ->  27 Load(3210) Distance(5664.820000000001) ->  26 Load(3310) Distance(5864.820000000001) ->  29 Load(3360) Distance(5964.820000000001) ->  34 Load(3410) Distance(6156.240000000001) ->  41 Load(3460) Distance(6156.240000000001) ->  132 Load(3510) Distance(6568.370000000001) ->  135 Load(3560) Distance(6568.370000000001) ->  131 Load(3660) Distance(6568.370000000001) ->  140 Load(3760) Distance(6568.370000000001) ->  254 Load(3860) Distance(6568.370000000001) ->  543 Load(3910) Distance(7009.790000000001) ->  544 Load(3940) Distance(7201.210000000001) ->  165 Load(3990) Distance(7501.210000000001) ->  161 Load(4040) Distance(8284.050000000001) ->  167 Load(4140) Distance(8584.050000000001) ->  150 Load(4240) Distance(8966.890000000001) ->  149 Load(4290) Distance(9037.6) ->  148 Load(4390) Distance(9237.6) ->  147 Load(4490) Distance(9570.44) ->  152 Load(4590) Distance(9620.44) ->  151 Load(4690) Distance(9970.44) ->  146 Load(4790) Distance(11291.150000000001) ->  160 Load(4840) Distance(12489.680000000002) ->  153 Load(4940) Distance(13101.810000000001) ->  154 Load(4990) Distance(13413.94) ->  155 Load(5090) Distance(13908.91) ->  156 Load(5140) Distance(13908.91) ->  596 Load(5190) Distance(13908.91) ->  506 Load(5240) Distance(13958.91) ->  504 Load(5290) Distance(13958.91) ->  365 Load(5390) Distance(13958.91) ->  501 Load(5490) Distance(13958.91) ->  360 Load(5590) Distance(13958.91) ->  497 Load(5640) Distance(13958.91) ->  314 Load(5690) Distance(13958.91) ->  496 Load(5740) Distance(13958.91) ->  303 Load(5840) Distance(13958.91) ->  493 Load(5890) Distance(14058.91) ->  500 Load(5940) Distance(14058.91) ->  251 Load(6040) Distance(14058.91) ->  492 Load(6090) Distance(14058.91) ->  248 Load(6190) Distance(14058.91) ->  499 Load(6290) Distance(14058.91) ->  253 Load(6390) Distance(14058.91) ->  498 Load(6440) Distance(14108.91) ->  491 Load(6490) Distance(14108.91) ->  247 Load(6590) Distance(14108.91) ->  490 Load(6690) Distance(14158.91) ->  489 Load(6790) Distance(14158.91) ->  245 Load(6890) Distance(14158.91) ->  488 Load(6990) Distance(14158.91) ->  532 Load(7090) Distance(14158.91) ->  623 Load(7190) Distance(14158.91) ->  524 Load(7290) Distance(14158.91) ->  627 Load(7340) Distance(14158.91) ->  526 Load(7390) Distance(14300.33) ->  527 Load(7490) Distance(14300.33) ->  573 Load(7590) Distance(14300.33) ->  529 Load(7640) Distance(14450.33) ->  528 Load(7740) Distance(14800.33) ->  530 Load(7790) Distance(14800.33) ->  487 Load(7890) Distance(14800.33) ->  531 Load(7940) Distance(14800.33) ->  628 Load(8040) Distance(14800.33) ->  296 Load(8090) Distance(16391.75) ->  644 Load(8190) Distance(16391.75) ->  0 Load(8190) Distance(16391.75)
+Distance of the route: 16391.75m
+Load of the route: 8190
+
+Total distance of all routes: 119355.0500m
+Total load of all routes: 47020
+Total number of routes: 647
+[Finished in 57.174s]
+
 --------------------------------------------------------------------------
+
+Wow. There were a LOT of arcs that didn't register. I'd love to visualise this.
+But wait; even through arc 0->285 shouldn't have registered, we still have a route 0->285->0.
+Let's check if it is registered in arcs:
+    print(vrp_instance.arcs[0][285])
 --------------------------------------------------------------------------
+
+Traceback (most recent call last):
+  File "C:\Users\jc321076\Documents\PhD\Code\external_data_routing.py", line 218, in <module>
+    main()
+  File "C:\Users\jc321076\Documents\PhD\Code\external_data_routing.py", line 122, in main
+    print(vrp_instance.arcs[0][285])
+KeyError: 285
+[Finished in 2.258s]
+
 --------------------------------------------------------------------------
+
+
+Okay, it's definitely not in arcs. What about get_distance_matrix()?
+Ah. The start of the function creates a matrix of zeroes:
+
+    def get_distance_matrix(self):
+          """ Creates a numpy array representing a matrix of arc distances.
+          """
+          dim = len(self.nodes)
+          distance_matrix = np.zeros((dim, dim))
+
+Which is why. So we need it to create a blank matrix?
+
+It's a bit difficult to do that with numpy.
+I modified add_node to also create the diagonal arcs:
+
+    new_node = Node(id, location, demand)
+    self_arc = Arc(new_node, new_node, 0)
+    self.arcs[new_node.id][new_node.id] = self_arc
+
+And made the depot arc at init:
+
+    self.arcs = defaultdict(dict)
+    self.arcs[0][0] = Arc(0, 0, 0)
+
+Then modified the distance_callback to read from arcs:
+
+def distance_callback(from_index, to_index):
+    from_node = manager.IndexToNode(from_index)
+    to_node = manager.IndexToNode(to_index)
+    distance = (vrp_instance.arcs[from_node][to_node]).distance
+    distance = distance * 1000
+    print(" {} -> {} distance: {} ".format(from_node, to_node, distance))
+    return distance
+
+Remember that the distance callback extracting from arcs didn't work previously, so I dunno if this will work...
 --------------------------------------------------------------------------
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+EDGE_WEIGHT_SECTION true
+DEMAND_SECTION
+
+weights given =  True
+name = BOPMid_full_matrix
+Vehicle.demand_capacity = 10000
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 0.08
+Depot.id = 0
+Depot.location = [0, 0]
+edge weights given = True
+dimension 647
+arcs in instance: 389293
+[[0.0000e+00 1.3620e+03 1.2570e+03 ... 1.0000e+00 3.6605e+04 3.0021e+04]
+ [1.3620e+03 0.0000e+00 5.9100e+02 ... 1.0000e+00 3.5188e+04 2.9549e+04]
+ [1.2570e+03 5.9100e+02 0.0000e+00 ... 2.4497e+04 3.5036e+04 2.8803e+04]
+ ...
+ [1.0000e+00 1.0000e+00 2.4497e+04 ... 0.0000e+00 1.9515e+04 2.9337e+04]
+ [3.6605e+04 3.5188e+04 3.5036e+04 ... 1.9515e+04 0.0000e+00 1.8250e+04]
+ [3.0021e+04 2.9549e+04 2.8803e+04 ... 2.9337e+04 1.8250e+04 0.0000e+00]]
+ 0 -> 0 distance: 0
+ 0 -> 0 distance: 0
+ 0 -> 0 distance: 0
+ 0 -> 0 distance: 0
+ .
+ .
+ 202 -> 0 distance: 16657000
+ 0 -> 202 distance: 16657000
+ 202 -> 0 distance: 16657000
+ 0 -> 202 distance: 16657000
+ 202 -> 0 distance: 16657000
+ 0 -> 202 distance: 16657000
+ 202 -> 0 distance: 16657000
+ 0 -> 202 distance: 16657000
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+.
+.
+Route for vehicle 641:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+
+Route for vehicle 642:
+ 0 Load(0) Distance(0.0) ->  98 Load(100) Distance(0.0) ->  97 Load(200) Distance(0.0) ->  96 Load(250) Distance(0.0) ->  95 Load(350) Distance(0.0) ->  94 Load(400) Distance(0.0) ->  93 Load(500) Distance(0.0) ->  92 Load(550) Distance(0.0) ->  91 Load(650) Distance(0.0) ->  90 Load(700) Distance(0.0) ->  89 Load(750) Distance(0.0) ->  88 Load(850) Distance(0.0) ->  87 Load(950) Distance(0.0) ->  86 Load(1000) Distance(0.0) ->  85 Load(1100) Distance(0.0) ->  84 Load(1200) Distance(0.0) ->  83 Load(1250) Distance(0.0) ->  82 Load(1300) Distance(0.0) ->  81 Load(1400) Distance(0.0) ->  80 Load(1500) Distance(0.0) ->  79 Load(1600) Distance(0.0) ->  78 Load(1700) Distance(0.0) ->  77 Load(1800) Distance(0.0) ->  76 Load(1900) Distance(0.0) ->  75 Load(2000) Distance(0.0) ->  74 Load(2050) Distance(0.0) ->  73 Load(2100) Distance(0.0) ->  72 Load(2200) Distance(0.0) ->  71 Load(2250) Distance(0.0) ->  70 Load(2300) Distance(0.0) ->  69 Load(2350) Distance(0.0) ->  68 Load(2400) Distance(0.0) ->  67 Load(2450) Distance(0.0) ->  66 Load(2500) Distance(0.0) ->  65 Load(2550) Distance(0.0) ->  64 Load(2580) Distance(0.0) ->  63 Load(2630) Distance(0.0) ->  62 Load(2680) Distance(0.0) ->  61 Load(2730) Distance(0.0) ->  60 Load(2780) Distance(0.0) ->  59 Load(2830) Distance(0.0) ->  58 Load(2880) Distance(0.0) ->  57 Load(2930) Distance(0.0) ->  56 Load(2980) Distance(0.0) ->  55 Load(3080) Distance(0.0) ->  54 Load(3130) Distance(0.0) ->  53 Load(3180) Distance(0.0) ->  52 Load(3230) Distance(0.0) ->  51 Load(3280) Distance(0.0) ->  50 Load(3330) Distance(0.0) ->  49 Load(3380) Distance(0.0) ->  48 Load(3430) Distance(0.0) ->  47 Load(3480) Distance(0.0) ->  46 Load(3530) Distance(0.0) ->  45 Load(3580) Distance(0.0) ->  44 Load(3630) Distance(0.0) ->  43 Load(3680) Distance(0.0) ->  42 Load(3730) Distance(0.0) ->  41 Load(3780) Distance(0.0) ->  40 Load(3830) Distance(0.0) ->  39 Load(3880) Distance(0.0) ->  38 Load(3980) Distance(0.0) ->  37 Load(4030) Distance(0.0) ->  36 Load(4080) Distance(0.0) ->  35 Load(4180) Distance(0.0) ->  34 Load(4230) Distance(0.0) ->  33 Load(4280) Distance(0.0) ->  32 Load(4380) Distance(0.0) ->  31 Load(4430) Distance(0.0) ->  30 Load(4480) Distance(0.0) ->  29 Load(4530) Distance(0.0) ->  28 Load(4580) Distance(0.0) ->  27 Load(4680) Distance(0.0) ->  26 Load(4780) Distance(0.0) ->  25 Load(4880) Distance(0.0) ->  24 Load(4980) Distance(0.0) ->  23 Load(5080) Distance(0.0) ->  22 Load(5180) Distance(0.0) ->  21 Load(5280) Distance(0.0) ->  20 Load(5330) Distance(0.0) ->  19 Load(5430) Distance(0.0) ->  18 Load(5530) Distance(0.0) ->  17 Load(5580) Distance(0.0) ->  16 Load(5630) Distance(0.0) ->  15 Load(5730) Distance(0.0) ->  14 Load(5830) Distance(0.0) ->  13 Load(5930) Distance(0.0) ->  12 Load(6030) Distance(0.0) ->  11 Load(6130) Distance(0.0) ->  10 Load(6230) Distance(0.0) ->  9 Load(6330) Distance(0.0) ->  8 Load(6430) Distance(0.0) ->  7 Load(6530) Distance(0.0) ->  6 Load(6630) Distance(0.0) ->  5 Load(6730) Distance(0.0) ->  4 Load(6830) Distance(0.0) ->  3 Load(6880) Distance(0.0) ->  2 Load(6980) Distance(0.0) ->  1 Load(7080) Distance(0.0) ->  0 Load(7080) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 7080
+
+Route for vehicle 643:
+ 0 Load(0) Distance(0.0) ->  228 Load(100) Distance(0.0) ->  226 Load(200) Distance(0.0) ->  225 Load(300) Distance(0.0) ->  224 Load(400) Distance(0.0) ->  223 Load(450) Distance(0.0) ->  222 Load(550) Distance(0.0) ->  221 Load(650) Distance(0.0) ->  220 Load(750) Distance(0.0) ->  219 Load(800) Distance(0.0) ->  218 Load(900) Distance(0.0) ->  217 Load(1000) Distance(0.0) ->  216 Load(1050) Distance(0.0) ->  215 Load(1100) Distance(0.0) ->  214 Load(1200) Distance(0.0) ->  213 Load(1300) Distance(0.0) ->  212 Load(1350) Distance(0.0) ->  211 Load(1450) Distance(0.0) ->  210 Load(1550) Distance(0.0) ->  209 Load(1650) Distance(0.0) ->  208 Load(1750) Distance(0.0) ->  207 Load(1850) Distance(0.0) ->  206 Load(1950) Distance(0.0) ->  205 Load(2050) Distance(0.0) ->  204 Load(2150) Distance(0.0) ->  203 Load(2250) Distance(0.0) ->  202 Load(2350) Distance(0.0) ->  201 Load(2450) Distance(0.0) ->  200 Load(2550) Distance(0.0) ->  199 Load(2600) Distance(0.0) ->  198 Load(2650) Distance(0.0) ->  197 Load(2750) Distance(0.0) ->  196 Load(2850) Distance(0.0) ->  195 Load(2950) Distance(0.0) ->  194 Load(3000) Distance(0.0) ->  193 Load(3050) Distance(0.0) ->  192 Load(3100) Distance(0.0) ->  191 Load(3200) Distance(0.0) ->  190 Load(3300) Distance(0.0) ->  189 Load(3400) Distance(0.0) ->  188 Load(3500) Distance(0.0) ->  187 Load(3600) Distance(0.0) ->  186 Load(3700) Distance(0.0) ->  185 Load(3800) Distance(0.0) ->  184 Load(3900) Distance(0.0) ->  183 Load(3950) Distance(0.0) ->  182 Load(4050) Distance(0.0) ->  181 Load(4100) Distance(0.0) ->  180 Load(4150) Distance(0.0) ->  179 Load(4200) Distance(0.0) ->  178 Load(4250) Distance(0.0) ->  177 Load(4300) Distance(0.0) ->  176 Load(4350) Distance(0.0) ->  175 Load(4400) Distance(0.0) ->  174 Load(4450) Distance(0.0) ->  173 Load(4550) Distance(0.0) ->  172 Load(4650) Distance(0.0) ->  171 Load(4750) Distance(0.0) ->  170 Load(4800) Distance(0.0) ->  169 Load(4900) Distance(0.0) ->  168 Load(5000) Distance(0.0) ->  167 Load(5100) Distance(0.0) ->  166 Load(5200) Distance(0.0) ->  165 Load(5250) Distance(0.0) ->  164 Load(5300) Distance(0.0) ->  163 Load(5350) Distance(0.0) ->  162 Load(5400) Distance(0.0) ->  161 Load(5450) Distance(0.0) ->  160 Load(5500) Distance(0.0) ->  159 Load(5550) Distance(0.0) ->  158 Load(5600) Distance(0.0) ->  157 Load(5700) Distance(0.0) ->  156 Load(5750) Distance(0.0) ->  155 Load(5850) Distance(0.0) ->  154 Load(5900) Distance(0.0) ->  153 Load(6000) Distance(0.0) ->  152 Load(6100) Distance(0.0) ->  151 Load(6200) Distance(0.0) ->  150 Load(6300) Distance(0.0) ->  149 Load(6350) Distance(0.0) ->  148 Load(6450) Distance(0.0) ->  147 Load(6550) Distance(0.0) ->  146 Load(6650) Distance(0.0) ->  145 Load(6750) Distance(0.0) ->  144 Load(6850) Distance(0.0) ->  143 Load(6950) Distance(0.0) ->  142 Load(7050) Distance(0.0) ->  141 Load(7150) Distance(0.0) ->  140 Load(7250) Distance(0.0) ->  139 Load(7350) Distance(0.0) ->  138 Load(7380) Distance(0.0) ->  137 Load(7430) Distance(0.0) ->  136 Load(7530) Distance(0.0) ->  135 Load(7580) Distance(0.0) ->  134 Load(7630) Distance(0.0) ->  133 Load(7680) Distance(0.0) ->  132 Load(7730) Distance(0.0) ->  131 Load(7830) Distance(0.0) ->  130 Load(7880) Distance(0.0) ->  129 Load(7980) Distance(0.0) ->  128 Load(8030) Distance(0.0) ->  127 Load(8080) Distance(0.0) ->  126 Load(8130) Distance(0.0) ->  125 Load(8180) Distance(0.0) ->  124 Load(8230) Distance(0.0) ->  123 Load(8280) Distance(0.0) ->  122 Load(8330) Distance(0.0) ->  121 Load(8380) Distance(0.0) ->  120 Load(8430) Distance(0.0) ->  119 Load(8530) Distance(0.0) ->  118 Load(8630) Distance(0.0) ->  117 Load(8680) Distance(0.0) ->  116 Load(8780) Distance(0.0) ->  115 Load(8880) Distance(0.0) ->  114 Load(8980) Distance(0.0) ->  113 Load(9080) Distance(0.0) ->  112 Load(9180) Distance(0.0) ->  111 Load(9280) Distance(0.0) ->  110 Load(9380) Distance(0.0) ->  109 Load(9430) Distance(0.0) ->  108 Load(9480) Distance(0.0) ->  107 Load(9530) Distance(0.0) ->  106 Load(9580) Distance(0.0) ->  105 Load(9630) Distance(0.0) ->  104 Load(9680) Distance(0.0) ->  103 Load(9730) Distance(0.0) ->  102 Load(9780) Distance(0.0) ->  101 Load(9830) Distance(0.0) ->  100 Load(9880) Distance(0.0) ->  99 Load(9980) Distance(0.0) ->  0 Load(9980) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 9980
+
+Route for vehicle 644:
+ 0 Load(0) Distance(0.0) ->  355 Load(50) Distance(0.0) ->  354 Load(100) Distance(0.0) ->  353 Load(200) Distance(0.0) ->  352 Load(250) Distance(0.0) ->  351 Load(300) Distance(0.0) ->  350 Load(350) Distance(0.0) ->  349 Load(380) Distance(0.0) ->  348 Load(480) Distance(0.0) ->  347 Load(530) Distance(0.0) ->  346 Load(580) Distance(0.0) ->  345 Load(610) Distance(0.0) ->  344 Load(710) Distance(0.0) ->  343 Load(760) Distance(0.0) ->  342 Load(810) Distance(0.0) ->  341 Load(860) Distance(0.0) ->  340 Load(960) Distance(0.0) ->  339 Load(1060) Distance(0.0) ->  338 Load(1160) Distance(0.0) ->  337 Load(1210) Distance(0.0) ->  336 Load(1260) Distance(0.0) ->  335 Load(1310) Distance(0.0) ->  334 Load(1360) Distance(0.0) ->  333 Load(1410) Distance(0.0) ->  332 Load(1460) Distance(0.0) ->  331 Load(1560) Distance(0.0) ->  330 Load(1660) Distance(0.0) ->  329 Load(1760) Distance(0.0) ->  328 Load(1810) Distance(0.0) ->  327 Load(1910) Distance(0.0) ->  326 Load(2010) Distance(0.0) ->  325 Load(2060) Distance(0.0) ->  324 Load(2110) Distance(0.0) ->  323 Load(2160) Distance(0.0) ->  322 Load(2210) Distance(0.0) ->  321 Load(2260) Distance(0.0) ->  320 Load(2360) Distance(0.0) ->  319 Load(2410) Distance(0.0) ->  318 Load(2460) Distance(0.0) ->  317 Load(2510) Distance(0.0) ->  316 Load(2560) Distance(0.0) ->  315 Load(2660) Distance(0.0) ->  314 Load(2710) Distance(0.0) ->  313 Load(2760) Distance(0.0) ->  312 Load(2810) Distance(0.0) ->  311 Load(2910) Distance(0.0) ->  310 Load(3010) Distance(0.0) ->  309 Load(3060) Distance(0.0) ->  308 Load(3160) Distance(0.0) ->  307 Load(3210) Distance(0.0) ->  306 Load(3260) Distance(0.0) ->  305 Load(3360) Distance(0.0) ->  304 Load(3460) Distance(0.0) ->  303 Load(3560) Distance(0.0) ->  302 Load(3660) Distance(0.0) ->  301 Load(3690) Distance(0.0) ->  300 Load(3790) Distance(0.0) ->  299 Load(3890) Distance(0.0) ->  298 Load(3990) Distance(0.0) ->  297 Load(4090) Distance(0.0) ->  296 Load(4140) Distance(0.0) ->  295 Load(4170) Distance(0.0) ->  294 Load(4220) Distance(0.0) ->  293 Load(4270) Distance(0.0) ->  292 Load(4300) Distance(0.0) ->  291 Load(4330) Distance(0.0) ->  290 Load(4380) Distance(0.0) ->  289 Load(4480) Distance(0.0) ->  288 Load(4580) Distance(0.0) ->  287 Load(4680) Distance(0.0) ->  286 Load(4780) Distance(0.0) ->  285 Load(4880) Distance(0.0) ->  284 Load(4980) Distance(0.0) ->  283 Load(5080) Distance(0.0) ->  282 Load(5180) Distance(0.0) ->  281 Load(5280) Distance(0.0) ->  280 Load(5380) Distance(0.0) ->  279 Load(5480) Distance(0.0) ->  278 Load(5580) Distance(0.0) ->  277 Load(5680) Distance(0.0) ->  276 Load(5780) Distance(0.0) ->  275 Load(5880) Distance(0.0) ->  274 Load(5930) Distance(0.0) ->  273 Load(6030) Distance(0.0) ->  272 Load(6080) Distance(0.0) ->  271 Load(6130) Distance(0.0) ->  270 Load(6180) Distance(0.0) ->  269 Load(6280) Distance(0.0) ->  268 Load(6380) Distance(0.0) ->  267 Load(6480) Distance(0.0) ->  266 Load(6580) Distance(0.0) ->  265 Load(6680) Distance(0.0) ->  264 Load(6780) Distance(0.0) ->  263 Load(6880) Distance(0.0) ->  262 Load(6980) Distance(0.0) ->  261 Load(7080) Distance(0.0) ->  260 Load(7180) Distance(0.0) ->  259 Load(7280) Distance(0.0) ->  258 Load(7330) Distance(0.0) ->  257 Load(7430) Distance(0.0) ->  256 Load(7530) Distance(0.0) ->  255 Load(7630) Distance(0.0) ->  254 Load(7730) Distance(0.0) ->  253 Load(7830) Distance(0.0) ->  252 Load(7930) Distance(0.0) ->  251 Load(8030) Distance(0.0) ->  250 Load(8130) Distance(0.0) ->  249 Load(8230) Distance(0.0) ->  248 Load(8330) Distance(0.0) ->  247 Load(8430) Distance(0.0) ->  246 Load(8480) Distance(0.0) ->  245 Load(8580) Distance(0.0) ->  244 Load(8680) Distance(0.0) ->  243 Load(8780) Distance(0.0) ->  242 Load(8880) Distance(0.0) ->  241 Load(8980) Distance(0.0) ->  240 Load(9080) Distance(0.0) ->  239 Load(9130) Distance(0.0) ->  238 Load(9180) Distance(0.0) ->  237 Load(9230) Distance(0.0) ->  236 Load(9280) Distance(0.0) ->  235 Load(9330) Distance(0.0) ->  234 Load(9430) Distance(0.0) ->  233 Load(9530) Distance(0.0) ->  232 Load(9630) Distance(0.0) ->  231 Load(9730) Distance(0.0) ->  230 Load(9830) Distance(0.0) ->  229 Load(9930) Distance(0.0) ->  227 Load(9980) Distance(0.0) ->  0 Load(9980) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 9980
+
+Route for vehicle 645:
+ 0 Load(0) Distance(0.0) ->  495 Load(100) Distance(0.0) ->  494 Load(200) Distance(0.0) ->  493 Load(250) Distance(0.0) ->  492 Load(300) Distance(0.0) ->  491 Load(350) Distance(0.0) ->  490 Load(450) Distance(0.0) ->  489 Load(550) Distance(0.0) ->  488 Load(650) Distance(0.0) ->  487 Load(750) Distance(0.0) ->  486 Load(850) Distance(0.0) ->  485 Load(950) Distance(0.0) ->  484 Load(1050) Distance(0.0) ->  483 Load(1150) Distance(0.0) ->  482 Load(1250) Distance(0.0) ->  481 Load(1350) Distance(0.0) ->  480 Load(1450) Distance(0.0) ->  479 Load(1550) Distance(0.0) ->  478 Load(1650) Distance(0.0) ->  477 Load(1750) Distance(0.0) ->  476 Load(1850) Distance(0.0) ->  475 Load(1900) Distance(0.0) ->  474 Load(1950) Distance(0.0) ->  473 Load(2000) Distance(0.0) ->  472 Load(2050) Distance(0.0) ->  471 Load(2100) Distance(0.0) ->  470 Load(2150) Distance(0.0) ->  469 Load(2200) Distance(0.0) ->  468 Load(2250) Distance(0.0) ->  467 Load(2280) Distance(0.0) ->  466 Load(2330) Distance(0.0) ->  465 Load(2360) Distance(0.0) ->  464 Load(2410) Distance(0.0) ->  463 Load(2460) Distance(0.0) ->  462 Load(2490) Distance(0.0) ->  461 Load(2540) Distance(0.0) ->  460 Load(2640) Distance(0.0) ->  459 Load(2690) Distance(0.0) ->  458 Load(2740) Distance(0.0) ->  457 Load(2790) Distance(0.0) ->  456 Load(2840) Distance(0.0) ->  455 Load(2890) Distance(0.0) ->  454 Load(2940) Distance(0.0) ->  453 Load(2990) Distance(0.0) ->  452 Load(3090) Distance(0.0) ->  451 Load(3190) Distance(0.0) ->  450 Load(3240) Distance(0.0) ->  449 Load(3290) Distance(0.0) ->  448 Load(3340) Distance(0.0) ->  447 Load(3390) Distance(0.0) ->  446 Load(3440) Distance(0.0) ->  445 Load(3490) Distance(0.0) ->  444 Load(3540) Distance(0.0) ->  443 Load(3590) Distance(0.0) ->  442 Load(3620) Distance(0.0) ->  441 Load(3650) Distance(0.0) ->  440 Load(3700) Distance(0.0) ->  439 Load(3750) Distance(0.0) ->  438 Load(3800) Distance(0.0) ->  437 Load(3850) Distance(0.0) ->  436 Load(3900) Distance(0.0) ->  435 Load(3950) Distance(0.0) ->  434 Load(4000) Distance(0.0) ->  433 Load(4050) Distance(0.0) ->  432 Load(4100) Distance(0.0) ->  431 Load(4150) Distance(0.0) ->  430 Load(4200) Distance(0.0) ->  429 Load(4300) Distance(0.0) ->  428 Load(4400) Distance(0.0) ->  427 Load(4500) Distance(0.0) ->  426 Load(4550) Distance(0.0) ->  425 Load(4650) Distance(0.0) ->  424 Load(4750) Distance(0.0) ->  423 Load(4850) Distance(0.0) ->  422 Load(4900) Distance(0.0) ->  421 Load(4950) Distance(0.0) ->  420 Load(4980) Distance(0.0) ->  419 Load(5030) Distance(0.0) ->  418 Load(5080) Distance(0.0) ->  417 Load(5130) Distance(0.0) ->  416 Load(5180) Distance(0.0) ->  415 Load(5230) Distance(0.0) ->  414 Load(5280) Distance(0.0) ->  413 Load(5330) Distance(0.0) ->  412 Load(5380) Distance(0.0) ->  411 Load(5430) Distance(0.0) ->  410 Load(5480) Distance(0.0) ->  409 Load(5530) Distance(0.0) ->  408 Load(5630) Distance(0.0) ->  407 Load(5680) Distance(0.0) ->  406 Load(5730) Distance(0.0) ->  405 Load(5780) Distance(0.0) ->  404 Load(5830) Distance(0.0) ->  403 Load(5880) Distance(0.0) ->  402 Load(5930) Distance(0.0) ->  401 Load(5980) Distance(0.0) ->  400 Load(6080) Distance(0.0) ->  399 Load(6130) Distance(0.0) ->  398 Load(6230) Distance(0.0) ->  397 Load(6280) Distance(0.0) ->  396 Load(6380) Distance(0.0) ->  395 Load(6430) Distance(0.0) ->  394 Load(6530) Distance(0.0) ->  393 Load(6630) Distance(0.0) ->  392 Load(6730) Distance(0.0) ->  391 Load(6830) Distance(0.0) ->  390 Load(6930) Distance(0.0) ->  389 Load(7030) Distance(0.0) ->  388 Load(7130) Distance(0.0) ->  387 Load(7180) Distance(0.0) ->  386 Load(7230) Distance(0.0) ->  385 Load(7330) Distance(0.0) ->  384 Load(7380) Distance(0.0) ->  383 Load(7430) Distance(0.0) ->  382 Load(7480) Distance(0.0) ->  381 Load(7530) Distance(0.0) ->  380 Load(7630) Distance(0.0) ->  379 Load(7730) Distance(0.0) ->  378 Load(7830) Distance(0.0) ->  377 Load(7930) Distance(0.0) ->  376 Load(8030) Distance(0.0) ->  375 Load(8130) Distance(0.0) ->  374 Load(8230) Distance(0.0) ->  373 Load(8330) Distance(0.0) ->  372 Load(8380) Distance(0.0) ->  371 Load(8480) Distance(0.0) ->  370 Load(8580) Distance(0.0) ->  369 Load(8680) Distance(0.0) ->  368 Load(8780) Distance(0.0) ->  367 Load(8880) Distance(0.0) ->  366 Load(8980) Distance(0.0) ->  365 Load(9080) Distance(0.0) ->  364 Load(9180) Distance(0.0) ->  363 Load(9280) Distance(0.0) ->  362 Load(9380) Distance(0.0) ->  361 Load(9480) Distance(0.0) ->  360 Load(9580) Distance(0.0) ->  359 Load(9680) Distance(0.0) ->  358 Load(9780) Distance(0.0) ->  357 Load(9880) Distance(0.0) ->  356 Load(9980) Distance(0.0) ->  0 Load(9980) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 9980
+
+Route for vehicle 646:
+ 0 Load(0) Distance(0.0) ->  646 Load(100) Distance(0.0) ->  645 Load(200) Distance(0.0) ->  644 Load(300) Distance(0.0) ->  643 Load(350) Distance(0.0) ->  642 Load(400) Distance(0.0) ->  641 Load(450) Distance(0.0) ->  640 Load(500) Distance(0.0) ->  639 Load(550) Distance(0.0) ->  638 Load(600) Distance(0.0) ->  637 Load(700) Distance(0.0) ->  636 Load(750) Distance(0.0) ->  635 Load(850) Distance(0.0) ->  634 Load(950) Distance(0.0) ->  633 Load(1000) Distance(0.0) ->  632 Load(1100) Distance(0.0) ->  631 Load(1200) Distance(0.0) ->  630 Load(1300) Distance(0.0) ->  629 Load(1400) Distance(0.0) ->  628 Load(1500) Distance(0.0) ->  627 Load(1550) Distance(0.0) ->  626 Load(1650) Distance(0.0) ->  625 Load(1750) Distance(0.0) ->  624 Load(1850) Distance(0.0) ->  623 Load(1950) Distance(0.0) ->  622 Load(2050) Distance(0.0) ->  621 Load(2150) Distance(0.0) ->  620 Load(2250) Distance(0.0) ->  619 Load(2350) Distance(0.0) ->  618 Load(2400) Distance(0.0) ->  617 Load(2500) Distance(0.0) ->  616 Load(2550) Distance(0.0) ->  615 Load(2600) Distance(0.0) ->  614 Load(2650) Distance(0.0) ->  613 Load(2700) Distance(0.0) ->  612 Load(2750) Distance(0.0) ->  611 Load(2850) Distance(0.0) ->  610 Load(2900) Distance(0.0) ->  609 Load(2950) Distance(0.0) ->  608 Load(3000) Distance(0.0) ->  607 Load(3050) Distance(0.0) ->  606 Load(3100) Distance(0.0) ->  605 Load(3150) Distance(0.0) ->  604 Load(3200) Distance(0.0) ->  603 Load(3250) Distance(0.0) ->  602 Load(3280) Distance(0.0) ->  601 Load(3310) Distance(0.0) ->  600 Load(3410) Distance(0.0) ->  599 Load(3460) Distance(0.0) ->  598 Load(3510) Distance(0.0) ->  597 Load(3560) Distance(0.0) ->  596 Load(3610) Distance(0.0) ->  595 Load(3660) Distance(0.0) ->  594 Load(3710) Distance(0.0) ->  593 Load(3760) Distance(0.0) ->  592 Load(3810) Distance(0.0) ->  591 Load(3860) Distance(0.0) ->  590 Load(3910) Distance(0.0) ->  589 Load(4010) Distance(0.0) ->  588 Load(4110) Distance(0.0) ->  587 Load(4160) Distance(0.0) ->  586 Load(4210) Distance(0.0) ->  585 Load(4260) Distance(0.0) ->  584 Load(4310) Distance(0.0) ->  583 Load(4360) Distance(0.0) ->  582 Load(4410) Distance(0.0) ->  581 Load(4460) Distance(0.0) ->  580 Load(4510) Distance(0.0) ->  579 Load(4610) Distance(0.0) ->  578 Load(4710) Distance(0.0) ->  577 Load(4760) Distance(0.0) ->  576 Load(4860) Distance(0.0) ->  575 Load(4910) Distance(0.0) ->  574 Load(5010) Distance(0.0) ->  573 Load(5110) Distance(0.0) ->  572 Load(5160) Distance(0.0) ->  571 Load(5260) Distance(0.0) ->  570 Load(5310) Distance(0.0) ->  569 Load(5410) Distance(0.0) ->  568 Load(5460) Distance(0.0) ->  567 Load(5510) Distance(0.0) ->  566 Load(5610) Distance(0.0) ->  565 Load(5710) Distance(0.0) ->  564 Load(5760) Distance(0.0) ->  563 Load(5810) Distance(0.0) ->  562 Load(5860) Distance(0.0) ->  561 Load(5910) Distance(0.0) ->  560 Load(6010) Distance(0.0) ->  559 Load(6060) Distance(0.0) ->  558 Load(6110) Distance(0.0) ->  557 Load(6160) Distance(0.0) ->  556 Load(6210) Distance(0.0) ->  555 Load(6260) Distance(0.0) ->  554 Load(6310) Distance(0.0) ->  553 Load(6410) Distance(0.0) ->  552 Load(6460) Distance(0.0) ->  551 Load(6560) Distance(0.0) ->  550 Load(6660) Distance(0.0) ->  549 Load(6760) Distance(0.0) ->  548 Load(6810) Distance(0.0) ->  547 Load(6860) Distance(0.0) ->  546 Load(6910) Distance(0.0) ->  545 Load(7010) Distance(0.0) ->  544 Load(7040) Distance(0.0) ->  543 Load(7090) Distance(0.0) ->  542 Load(7140) Distance(0.0) ->  541 Load(7190) Distance(0.0) ->  540 Load(7240) Distance(0.0) ->  539 Load(7290) Distance(0.0) ->  538 Load(7340) Distance(0.0) ->  537 Load(7440) Distance(0.0) ->  536 Load(7490) Distance(0.0) ->  535 Load(7540) Distance(0.0) ->  534 Load(7590) Distance(0.0) ->  533 Load(7640) Distance(0.0) ->  532 Load(7740) Distance(0.0) ->  531 Load(7790) Distance(0.0) ->  530 Load(7840) Distance(0.0) ->  529 Load(7890) Distance(0.0) ->  528 Load(7990) Distance(0.0) ->  527 Load(8090) Distance(0.0) ->  526 Load(8140) Distance(0.0) ->  525 Load(8240) Distance(0.0) ->  524 Load(8340) Distance(0.0) ->  523 Load(8370) Distance(0.0) ->  522 Load(8470) Distance(0.0) ->  521 Load(8570) Distance(0.0) ->  520 Load(8620) Distance(0.0) ->  519 Load(8670) Distance(0.0) ->  518 Load(8720) Distance(0.0) ->  517 Load(8770) Distance(0.0) ->  516 Load(8820) Distance(0.0) ->  515 Load(8870) Distance(0.0) ->  514 Load(8970) Distance(0.0) ->  513 Load(9070) Distance(0.0) ->  512 Load(9100) Distance(0.0) ->  511 Load(9150) Distance(0.0) ->  510 Load(9200) Distance(0.0) ->  509 Load(9250) Distance(0.0) ->  508 Load(9300) Distance(0.0) ->  507 Load(9350) Distance(0.0) ->  506 Load(9400) Distance(0.0) ->  505 Load(9450) Distance(0.0) ->  504 Load(9500) Distance(0.0) ->  503 Load(9550) Distance(0.0) ->  502 Load(9600) Distance(0.0) ->  501 Load(9700) Distance(0.0) ->  500 Load(9750) Distance(0.0) ->  499 Load(9850) Distance(0.0) ->  498 Load(9900) Distance(0.0) ->  497 Load(9950) Distance(0.0) ->  496 Load(10000) Distance(0.0) ->  0 Load(10000) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 10000
+
+Total distance of all routes: 0.0000m
+Total load of all routes: 47020
+Total number of routes: 647
+[Finished in 8.562s]
+
 --------------------------------------------------------------------------
+
+Yeah okay, that didn't work. But why? Does or-tools only accept connected graphs?
+I posted this issue on the ortools mailing list, and Mizux Seiha suggested:
+"otherwise if there is no path between two nodes (or you want to forbid this travel), since solver can't overflow, you may use max int64 aka 0x7FFFFFFFFFFFFFFF in the transit callback"
+https://groups.google.com/g/or-tools-discuss/c/HFfTMCs1GDQ/m/GDvRlzTtAAAJ
+
+Which is a great idea!
+Let's see what this max size is for Python 3:
+https://stackoverflow.com/questions/7604966/maximum-and-minimum-values-for-ints#:~:text=maxsize%20%2C%20which%20is%20the%20maximum,list%20or%20in%2Dmemory%20sequence.
+As suggested, I use:
+    print(sys.maxsize)
+9223372036854775807. Wow, big number. I hope it doesn't cost extra power to use it every time.
+
+I've modified file_processor to replace zero distances with sys.maxsize:
+
+    diag_distance_matrix = []
+    if line.startswith('EDGE_WEIGHT_SECTION'):
+        vrp_instance.edge_weights_given = True
+        line = vrp_file.readline()  # skip depot line
+        for i in range(dimension - 1):
+            line = vrp_file.readline()
+            distance_line = line.split()[:i + 1]  # reads line of lower diag matrix
+            node_distances = []
+            for distance in distance_line:
+                distance_int = float(distance)
+                if distance_int == 0:
+                    node_distances.append(sys.maxsize)
+                else:
+                    node_distances.append(distance_int)
+            diag_distance_matrix.append(node_distances)
+            print(node_distances)
+
+Looking at the printed node_distances:
 --------------------------------------------------------------------------
+
+[1362.13]
+[1257.11, 591.42]
+[553.55, 2010.66, 1450.0]
+[3740.56, 5344.11, 4721.32, 3212.74]
+[3454.16, 5057.72, 4434.92, 2926.35, 300.0]
+.
+.
+[9223372036854775807, 17963.35, 17030.51, 9223372036854775807, 14990.56, ....
+
+0 -> 202 distance: 16657720.000000002
+202 -> 0 distance: 16657720.000000002
+0 -> 202 distance: 16657720.000000002
+203 -> 0 distance: 9.223372036854776e+21
+Solver status:  1
+[Finished in 18.063s]
+
 --------------------------------------------------------------------------
+
+
+The distance callback still stops at 203, where our first large number appears.
+Does ortools not like large numbers? Let's reduce our large number to 1000,000 and see if that changes anything.
 --------------------------------------------------------------------------
+NAME: BOPMid_full_matrix
+
+TYPE: CVRP
+
+COMMENT: Stands for "Birds Of Prey Mid-paddock", describing the drone-surveyed area at which said birds tried to take down survey drone. Located at Redlands Park, McKinlay, QLD, Australia. Collected by Tiria Andersen, see Honours Thesis.
+
+DIMENSION: 647
+
+CAPACITY: 80000
+
+EDGE_WEIGHT_TYPE: EXPLICIT
+
+EDGE_WEIGHT_FORMAT: FULL_MATRIX
+
+NODE_COORD_TYPE: TWOD_COORDS
+
+EDGE_WEIGHT_SECTION true
+DEMAND_SECTION
+
+weights given =  True
+name = BOPMid_full_matrix
+Vehicle.demand_capacity = 10000
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 0.08
+Depot.id = 0
+Depot.location = [0, 0]
+edge weights given = True
+dimension 647
+arcs in instance: 417963
+[[      0.      1362.13    1257.11     553.55    3740.56    3454.16
+     3542.03    3757.72    4107.11    5025.48    4834.06    6175.48
+     6556.24    6171.32    6117.77    6022.79    5707.11    5815.69
+     6007.11    5919.24    5981.37    7223.4     6978.43    7016.3
+     7316.3     7581.98    6472.79    6647.06    6552.08    6269.24
+     6855.63    6752.08    7047.06    7126.35    6327.82    6144.97
+     6003.55    5841.42    5982.84    6091.42    6253.55    6394.97
+     6182.84    6312.13    5920.71    5850.      5920.71    6062.13
+     5991.42    6214.21    6684.92    6307.11    6489.95    6519.24
+     6344.97    6403.55    6598.53    6760.66    6727.82    6848.53
+     6910.66    6877.82    6865.69    6562.13    6653.55    7089.95
+     7384.92    7414.21    7331.37    7281.37    7189.95    7298.53
+     7522.79    7094.97    6494.97    7384.92    7479.9     7834.92
+     7831.37    8114.21    8088.48    7357.11    7486.4     8043.5
+     8039.95    7983.45    8283.45    8333.45    8483.45    8562.74
+     8400.61    8626.35    8738.48    8388.48    8642.03    8564.21
+     8722.79    8914.21    8664.21    8810.66    8698.53    8577.82
+     8548.53    9127.82    8027.82    8227.82    7948.53    7665.69
+     8617.77    8754.16    8848.53    8907.11    9014.21    9322.79
+     9310.66    8981.37    6048.53    6277.82    6331.37    6069.24
+     6422.79    6403.55    6432.84    6524.26    6574.26    6682.84
+     7660.66    7702.08    7207.11    6769.24    6753.55    6757.11
+     8119.24    7857.11    7694.97    7636.4     8239.95    6931.37
+     6353.55    8016.3     8480.51    9639.95    9931.37   10314.82
+    10120.46   10782.59   11498.28   12474.01   12831.12   13151.83
+    13555.38   12018.99   12268.99   13368.12   13508.07   13503.05
+    13318.73   13163.71   13151.58   12610.16   12048.89   13258.33
+    14982.59   15272.54   10857.72   12929.04   13118.38   13289.7
+    14191.78    9587.62    3689.95   12687.62   12166.9    12274.01
+    12239.09   12974.87   11988.48   13229.9    12405.63   12447.06
+    12462.74   12259.19   12809.19   13042.03   12394.11   14484.92
+    15442.03   14357.72   14004.16   14181.98   14176.96   15590.56
+    16347.67   16049.14   15857.72   16240.56   15964.82   15631.98
+    16040.56   15969.85   16140.56   13489.09   16657.72 1000000.
+    18228.43   18587.01   17906.24   17442.03   17561.27   18111.88
+    19016.9    19194.11   17833.45   17924.87   18071.32   18062.74
+  1000000.   1000000.   1000000.     20466.3    20628.43   20457.72
+    21090.56   21269.85   20849.14   20887.01   21119.85   21156.24
+    21330.51   21518.38   21744.11   22014.82   22326.96   23863.96
+    23631.12   23768.99   23827.56   23994.72   23882.59   23844.72
+    23544.72   23403.3    24191.17   23159.8    23297.67   23426.96
+    23651.22   23568.38   22507.72 1000000.     23935.53   24859.8
+    24540.56   24654.16    5859.8     5944.72    8502.69    8635.53
+     8426.96    8147.67   11757.11   12160.66   11519.24   12107.11
+    11239.95   10531.37   10276.35   11012.74   10042.03    9616.3
+     7544.97    7650.     11932.84   12757.11   12753.55   12565.69
+    13065.69   28763.35   28604.77   28009.8    27780.51   26731.98
+    26668.38   28602.08   27164.21 1000000.     23372.79 1000000.
+    25226.35   25154.16   28135.53   28114.82   28226.96 1000000.
+    28076.96   28006.24   25842.03   20317.51   19241.78   18074.62
+    17233.2     6189.95 1000000.     23068.73   24062.24   12400.1
+     7016.9     6646.19   27965.28   27786.     25495.44   26876.2
+    26395.44   27124.73   26523.86   24958.18   24949.6    23766.76
+    23758.18   21221.78   21159.65   21306.1    21138.94   21135.39
+    19876.2    19938.33   15928.78   16796.55   17050.1    16934.42
+    17001.58   17630.87   17641.53   17023.76   17135.89   16282.34
+    16530.26   18085.03   18153.66   17963.71   19230.     18578.53
+    19034.17   18909.9    19364.93   19785.64   19488.58   19609.29
+    18908.68   19207.21   19170.82   19762.24   18211.02   18504.52
+    18350.97   16449.14   22903.66 1000000.     21791.53   21782.34
+    25153.05   25027.31   24663.1    25050.97   25042.39   24650.97
+    22983.2    25023.51   24944.22   25495.44   25760.51   26234.78
+    25308.43   26526.2    26070.56   26224.12   26586.25   26541.27
+    23352.19   26698.38   26806.96   27039.8    27022.64   26851.93
+    27003.41   26658.43   27117.62   27288.33   27155.49   25017.26
+  1000000.     24843.96   27568.23   28073.25   28666.76   28742.49
+    28090.41   28256.1    28369.7    28638.94   28568.23   28028.28
+    27836.86   27957.57   27974.73   27916.15   28548.99   28528.28
+    28657.57   28645.44   28495.44   28436.86   28116.15   28254.02
+    28533.3    28504.02   28266.15   28174.73   28581.22   28622.64
+  1000000.     28581.22   28710.51   28091.88   28424.73   27686.25
+    28131.22   28124.12   28772.64   28622.64   28610.51   28907.57
+    29057.57   28774.73   28654.02   28866.15   29016.15   28874.73
+    28986.86   28964.07   28981.22   28931.22   28860.51   28889.8
+    28866.15   28695.44   28766.15   28716.15   28984.78   28772.64
+    28598.38   29336.     29516.76   29288.94   29613.2    28012.59
+  1000000.     28616.15   28448.99   28469.7    28731.83   28428.28
+    28745.44 1000000.   1000000.   1000000.     28981.22   28931.22
+    28710.51 1000000.     28966.15   28966.15   28007.57   27966.15
+    24394.22   23321.42   27402.19   27772.9    27997.16   29526.2
+    29877.67   30929.75   30414.07   31514.07   31885.39   33065.28
+    32807.57   33414.68   30089.55   29886.61   30136.61   31192.85
+    31986.35   32013.56   32083.66   31732.8    31346.4    31287.82
+    31051.43   31929.25   32001.43   31407.93   31576.55   31692.24
+    32119.2    31894.93   32148.48   31959.4    31714.42   29888.08
+    28928.03   29348.74 1000000.     27325.08   22422.03   22873.51
+    23023.51   22864.93   34419.81   35181.94   35552.65   35207.67
+    35486.96   35115.64   34280.97   33672.39   34108.79   34041.63
+    34169.45   34302.29   34690.16   34947.27   34010.26   34265.28
+    36278.99   36246.15   36734.02   28892.14   30356.35   30589.19
+  1000000.     28864.21    6206.85   12501.22   12766.9    10497.67
+    17916.4    14019.34   18708.33   13636.14   13861.88   13775.48
+    14061.88   14120.46   14281.12   14522.54   14563.96   14410.41
+    14781.12   14822.54   15619.85   15549.14   15569.85   15628.43
+    15678.43 1000000.     16578.43   16612.74   16961.27   24122.54
+    27594.72   27682.59   28161.88   27901.22   28225.48   27439.09
+    27426.96   27423.4    27499.14   27364.82   26316.3    26266.3
+  1000000.   1000000.   1000000.   1000000.     30345.94   30458.07
+    30693.     26327.31   25813.1    26927.31   27160.16   27303.05
+    24194.11   24031.98   25625.84   23154.52   23004.52   23166.65
+    20478.78   15276.7     7934.92    7931.37    7839.95   23333.2
+    23179.65   28504.27   23491.27   17930.87   15878.78   14815.69
+    23843.35   23171.78   22264.68   22373.25   22423.25   30524.73
+    31528.28   31511.12   33054.62   33313.2    33578.89   33854.62
+    33733.91   33478.89   34133.91   33983.91   34846.05   34206.71
+    34306.71   33753.15   34156.71   34675.34   34796.05   34548.13
+    34606.71   18327.82   18747.06   18934.92   35716.86   36949.09
+    37523.36 1000000.   1000000.     36605.84   30021.17]
+    ....
+
+Solver status:  1
+Route for vehicle 0:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+
+Route for vehicle 1:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+.
+.
+Route for vehicle 641:
+ 0 Load(0) Distance(0.0) ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+
+Route for vehicle 642:
+ 0 Load(0) Distance(553.55) ->  3 Load(50) Distance(6050.610000000001) ->  13 Load(150) Distance(7250.610000000001) ->  76 Load(250) Distance(7492.030000000001) ->  85 Load(350) Distance(7542.030000000001) ->  86 Load(400) Distance(7592.030000000001) ->  87 Load(500) Distance(7883.450000000001) ->  94 Load(550) Distance(8024.870000000001) ->  92 Load(600) Distance(11224.87) ->  176 Load(650) Distance(11495.58) ->  181 Load(700) Distance(13342.64) ->  190 Load(800) Distance(13966.9) ->  194 Load(850) Distance(14108.32) ->  198 Load(900) Distance(14158.32) ->  200 Load(1000) Distance(14408.32) ->  192 Load(1050) Distance(19799.739999999998) ->  228 Load(1150) Distance(21589.69) ->  241 Load(1250) Distance(21639.69) ->  240 Load(1350) Distance(22160.399999999998) ->  233 Load(1450) Distance(22331.109999999997) ->  569 Load(1550) Distance(22781.109999999997) ->  237 Load(1600) Distance(23113.949999999997) ->  242 Load(1700) Distance(24636.739999999998) ->  251 Load(1800) Distance(25186.739999999998) ->  252 Load(1900) Distance(26105.98) ->  249 Load(2000) Distance(27213.09) ->  248 Load(2100) Distance(27828.78) ->  232 Load(2200) Distance(27949.489999999998) ->  231 Load(2300) Distance(28099.489999999998) ->  230 Load(2400) Distance(28361.62) ->  229 Load(2500) Distance(28603.039999999997) ->  227 Load(2550) Distance(28935.879999999997) ->  223 Load(2600) Distance(28985.879999999997) ->  222 Load(2700) Distance(29256.589999999997) ->  221 Load(2800) Distance(29306.589999999997) ->  220 Load(2900) Distance(29406.589999999997) ->  224 Load(3000) Distance(29456.589999999997) ->  226 Load(3100) Distance(29606.589999999997) ->  225 Load(3200) Distance(31372.279999999995) ->  219 Load(3250) Distance(40276.439999999995) ->  358 Load(3350) Distance(41807.81) ->  475 Load(3400) Distance(43380.6) ->  368 Load(3500) Distance(43430.6) ->  367 Load(3600) Distance(44567.0) ->  374 Load(3700) Distance(44758.42) ->  376 Load(3800) Distance(44908.42) ->  379 Load(3900) Distance(45382.68) ->  388 Load(4000) Distance(45482.68) ->  387 Load(4050) Distance(46127.65) ->  405 Load(4100) Distance(46177.65) ->  473 Load(4150) Distance(46248.36) ->  404 Load(4200) Distance(46369.07) ->  412 Load(4250) Distance(46419.07) ->  416 Load(4300) Distance(46489.78) ->  417 Load(4350) Distance(46610.49) ->  455 Load(4400) Distance(46681.2) ->  423 Load(4500) Distance(46781.2) ->  413 Load(4550) Distance(47405.46) ->  431 Load(4600) Distance(47505.46) ->  432 Load(4650) Distance(52511.09) ->  626 Load(4750) Distance(52561.09) ->  633 Load(4800) Distance(52661.09) ->  634 Load(4900) Distance(52711.09) ->  628 Load(5000) Distance(52911.09) ->  627 Load(5050) Distance(53181.799999999996) ->  624 Load(5150) Distance(53231.799999999996) ->  621 Load(5250) Distance(53281.799999999996) ->  620 Load(5350) Distance(54109.619999999995) ->  484 Load(5450) Distance(55178.85999999999) ->  617 Load(5550) Distance(55461.69999999999) ->  646 Load(5650) Distance(56703.11999999999) ->  470 Load(5700) Distance(56903.11999999999) ->  437 Load(5750) Distance(57185.959999999985) ->  443 Load(5800) Distance(57285.959999999985) ->  467 Load(5830) Distance(57335.959999999985) ->  466 Load(5880) Distance(57456.669999999984) ->  447 Load(5930) Distance(57527.37999999998) ->  457 Load(5980) Distance(57627.37999999998) ->  424 Load(6080) Distance(57677.37999999998) ->  456 Load(6130) Distance(1057677.38) ->  390 Load(6230) Distance(2057677.38) ->  463 Load(6280) Distance(3057677.38) ->  512 Load(6310) Distance(3057727.38) ->  513 Load(6410) Distance(3062033.01) ->  314 Load(6460) Distance(3063274.4299999997) ->  309 Load(6510) Distance(3063374.4299999997) ->  308 Load(6610) Distance(3071814.9899999998) ->  645 Load(6710) Distance(3081610.9299999997) ->  518 Load(6760) Distance(3082273.0599999996) ->  519 Load(6810) Distance(3082535.1899999995) ->  521 Load(6910) Distance(3082585.1899999995) ->  522 Load(7010) Distance(3082705.8999999994) ->  520 Load(7060) Distance(3083759.4499999993) ->  640 Load(7110) Distance(3084250.869999999) ->  534 Load(7160) Distance(3084400.869999999) ->  535 Load(7210) Distance(3085012.999999999) ->  536 Load(7260) Distance(3086323.659999999) ->  642 Load(7310) Distance(3086797.919999999) ->  641 Load(7360) Distance(3088894.979999999) ->  523 Load(7390) Distance(3091839.9499999993) ->  499 Load(7490) Distance(3092310.659999999) ->  506 Load(7540) Distance(3092360.659999999) ->  504 Load(7590) Distance(3092531.369999999) ->  492 Load(7640) Distance(3092652.079999999) ->  505 Load(7690) Distance(3092702.079999999) ->  495 Load(7790) Distance(3093105.629999999) ->  497 Load(7840) Distance(3093176.339999999) ->  496 Load(7890) Distance(3093426.339999999) ->  491 Load(7940) Distance(3093476.339999999) ->  498 Load(7990) Distance(3094338.469999999) ->  493 Load(8040) Distance(3094438.469999999) ->  500 Load(8090) Distance(3095188.469999999) ->  501 Load(8190) Distance(3095592.0199999986) ->  503 Load(8240) Distance(3095862.7299999986) ->  494 Load(8340) Distance(3096083.4399999985) ->  507 Load(8390) Distance(3096474.8599999985) ->  508 Load(8440) Distance(3096686.9899999984) ->  502 Load(8490) Distance(3097894.099999998) ->  490 Load(8590) Distance(3097944.099999998) ->  489 Load(8690) Distance(3098494.099999998) ->  511 Load(8740) Distance(3098914.809999998) ->  510 Load(8790) Distance(3100454.7599999984) ->  509 Load(8840) Distance(3101120.4499999983) ->  488 Load(8940) Distance(3101703.289999998) ->  451 Load(9040) Distance(3102318.979999998) ->  452 Load(9140) Distance(3102489.689999998) ->  454 Load(9190) Distance(3102751.819999998) ->  453 Load(9240) Distance(3103363.949999998) ->  395 Load(9290) Distance(3103605.369999998) ->  394 Load(9390) Distance(3104426.0799999977) ->  393 Load(9490) Distance(3104476.0799999977) ->  396 Load(9590) Distance(3104526.0799999977) ->  401 Load(9640) Distance(3104576.0799999977) ->  472 Load(9690) Distance(3104626.0799999977) ->  403 Load(9740) Distance(3104726.0799999977) ->  402 Load(9790) Distance(3105491.7699999977) ->  386 Load(9840) Distance(3109585.8799999976) ->  516 Load(9890) Distance(3109685.8799999976) ->  515 Load(9940) Distance(3120389.7899999977) ->  160 Load(9990) Distance(3132438.679999998) ->  0 Load(9990) Distance(3132438.679999998)
+Distance of the route: 3132438.679999998m
+Load of the route: 9990
+
+Route for vehicle 643:
+ 0 Load(0) Distance(8480.51) ->  140 Load(100) Distance(13247.41) ->  153 Load(200) Distance(13859.539999999999) ->  154 Load(250) Distance(14171.669999999998) ->  155 Load(350) Distance(14666.639999999998) ->  156 Load(400) Distance(14908.059999999998) ->  157 Load(500) Distance(14958.059999999998) ->  158 Load(550) Distance(15399.479999999998) ->  159 Load(600) Distance(16992.979999999996) ->  305 Load(700) Distance(18742.979999999996) ->  547 Load(750) Distance(25252.779999999995) ->  324 Load(800) Distance(25352.779999999995) ->  325 Load(850) Distance(31086.839999999997) ->  514 Load(950) Distance(31723.239999999998) ->  517 Load(1000) Distance(32935.369999999995) ->  608 Load(1050) Distance(33806.079999999994) ->  612 Load(1100) Distance(35458.159999999996) ->  369 Load(1200) Distance(37068.82) ->  392 Load(1300) Distance(37410.24) ->  397 Load(1350) Distance(37560.24) ->  400 Load(1450) Distance(37610.24) ->  460 Load(1550) Distance(37660.24) ->  399 Load(1600) Distance(37780.95) ->  461 Load(1650) Distance(37830.95) ->  398 Load(1750) Distance(37901.659999999996) ->  459 Load(1800) Distance(37951.659999999996) ->  458 Load(1850) Distance(38022.369999999995) ->  406 Load(1900) Distance(38072.369999999995) ->  407 Load(1950) Distance(38122.369999999995) ->  411 Load(2000) Distance(38193.079999999994) ->  410 Load(2050) Distance(38243.079999999994) ->  409 Load(2100) Distance(38293.079999999994) ->  408 Load(2200) Distance(38484.49999999999) ->  433 Load(2250) Distance(38555.20999999999) ->  462 Load(2280) Distance(38655.20999999999) ->  414 Load(2330) Distance(38725.91999999999) ->  415 Load(2380) Distance(38875.91999999999) ->  434 Load(2430) Distance(38975.91999999999) ->  445 Load(2480) Distance(39046.62999999999) ->  446 Load(2530) Distance(39096.62999999999) ->  444 Load(2580) Distance(39167.33999999999) ->  435 Load(2630) Distance(39267.33999999999) ->  471 Load(2680) Distance(39317.33999999999) ->  436 Load(2730) Distance(39388.04999999999) ->  438 Load(2780) Distance(39488.04999999999) ->  440 Load(2830) Distance(39608.75999999999) ->  442 Load(2860) Distance(39708.75999999999) ->  441 Load(2890) Distance(39758.75999999999) ->  439 Load(2940) Distance(39858.75999999999) ->  449 Load(2990) Distance(39929.46999999999) ->  430 Load(3040) Distance(39979.46999999999) ->  468 Load(3090) Distance(40100.179999999986) ->  421 Load(3140) Distance(40150.179999999986) ->  422 Load(3190) Distance(40220.889999999985) ->  465 Load(3220) Distance(40291.599999999984) ->  464 Load(3270) Distance(40512.30999999998) ->  469 Load(3320) Distance(40733.01999999998) ->  420 Load(3350) Distance(40783.01999999998) ->  419 Load(3400) Distance(40833.01999999998) ->  418 Load(3450) Distance(41386.569999999985) ->  426 Load(3500) Distance(41627.98999999998) ->  425 Load(3600) Distance(42048.69999999998) ->  427 Load(3700) Distance(42169.40999999998) ->  450 Load(3750) Distance(42440.11999999998) ->  429 Load(3850) Distance(42490.11999999998) ->  428 Load(3950) Distance(42540.11999999998) ->  448 Load(4000) Distance(43190.11999999998) ->  479 Load(4100) Distance(44730.06999999998) ->  618 Load(4150) Distance(44780.06999999998) ->  619 Load(4250) Distance(46520.019999999975) ->  485 Load(4350) Distance(47273.56999999998) ->  525 Load(4450) Distance(47614.989999999976) ->  526 Load(4500) Distance(47756.409999999974) ->  527 Load(4600) Distance(48156.409999999974) ->  528 Load(4700) Distance(48306.409999999974) ->  529 Load(4750) Distance(48880.66999999998) ->  531 Load(4800) Distance(49351.379999999976) ->  530 Load(4850) Distance(50351.379999999976) ->  524 Load(4950) Distance(50551.379999999976) ->  532 Load(5050) Distance(51284.21999999997) ->  625 Load(5150) Distance(51334.21999999997) ->  622 Load(5250) Distance(51384.21999999997) ->  631 Load(5350) Distance(51484.21999999997) ->  632 Load(5450) Distance(51625.63999999997) ->  533 Load(5500) Distance(51917.05999999997) ->  636 Load(5550) Distance(51967.05999999997) ->  635 Load(5650) Distance(52017.05999999997) ->  630 Load(5750) Distance(52087.76999999997) ->  629 Load(5850) Distance(52137.76999999997) ->  623 Load(5950) Distance(52787.76999999997) ->  487 Load(6050) Distance(52837.76999999997) ->  486 Load(6150) Distance(53957.009999999966) ->  483 Load(6250) Distance(54269.13999999996) ->  481 Load(6350) Distance(54319.13999999996) ->  482 Load(6450) Distance(54510.55999999996) ->  480 Load(6550) Distance(54831.26999999996) ->  539 Load(6600) Distance(55081.26999999996) ->  538 Load(6650) Distance(56912.63999999996) ->  607 Load(6700) Distance(60016.79999999996) ->  389 Load(6800) Distance(62634.569999999956) ->  476 Load(6900) Distance(62934.569999999956) ->  477 Load(7000) Distance(62984.569999999956) ->  478 Load(7100) Distance(64091.67999999996) ->  537 Load(7200) Distance(67882.23999999996) ->  588 Load(7300) Distance(68894.36999999997) ->  587 Load(7350) Distance(68965.07999999997) ->  586 Load(7400) Distance(72436.39999999998) ->  570 Load(7450) Distance(72557.10999999999) ->  571 Load(7550) Distance(72927.81999999999) ->  572 Load(7600) Distance(73698.53) ->  573 Load(7700) Distance(74539.95) ->  574 Load(7800) Distance(75255.64) ->  575 Load(7850) Distance(75326.35) ->  576 Load(7950) Distance(75376.35) ->  579 Load(8050) Distance(75447.06000000001) ->  577 Load(8100) Distance(75729.90000000001) ->  578 Load(8200) Distance(76812.74) ->  580 Load(8250) Distance(76962.74) ->  581 Load(8300) Distance(77162.74) ->  582 Load(8350) Distance(77362.74) ->  583 Load(8400) Distance(77624.87000000001) ->  584 Load(8450) Distance(78516.29000000001) ->  585 Load(8500) Distance(79635.53000000001) ->  253 Load(8600) Distance(80563.35000000002) ->  250 Load(8700) Distance(80987.61000000002) ->  247 Load(8800) Distance(81037.61000000002) ->  245 Load(8900) Distance(81137.61000000002) ->  246 Load(8950) Distance(81258.32000000002) ->  244 Load(9050) Distance(81329.03000000003) ->  243 Load(9150) Distance(82261.87000000002) ->  238 Load(9200) Distance(82382.58000000003) ->  239 Load(9250) Distance(82532.58000000003) ->  236 Load(9300) Distance(82603.29000000004) ->  235 Load(9350) Distance(82724.00000000004) ->  234 Load(9450) Distance(91636.13000000005) ->  559 Load(9500) Distance(91936.13000000005) ->  557 Load(9550) Distance(92006.84000000005) ->  554 Load(9600) Distance(92077.55000000006) ->  549 Load(9700) Distance(92913.95000000006) ->  171 Load(9800) Distance(97869.58000000006) ->  25 Load(9900) Distance(98011.00000000006) ->  24 Load(10000) Distance(105327.30000000006) ->  0 Load(10000) Distance(105327.30000000006)
+Distance of the route: 105327.30000000006m
+Load of the route: 10000
+
+Route for vehicle 644:
+ 0 Load(0) Distance(3689.95) ->  170 Load(50) Distance(4231.37) ->  8 Load(150) Distance(5483.45) ->  6 Load(250) Distance(5533.45) ->  5 Load(350) Distance(5583.45) ->  7 Load(450) Distance(5804.16) ->  4 Load(550) Distance(6914.82) ->  9 Load(650) Distance(7439.08) ->  10 Load(750) Distance(8489.08) ->  11 Load(850) Distance(9246.19) ->  12 Load(950) Distance(9816.900000000001) ->  21 Load(1050) Distance(9966.900000000001) ->  22 Load(1150) Distance(10016.900000000001) ->  23 Load(1250) Distance(10703.300000000001) ->  14 Load(1350) Distance(10803.300000000001) ->  15 Load(1450) Distance(10853.300000000001) ->  20 Load(1500) Distance(10903.300000000001) ->  19 Load(1600) Distance(11024.01) ->  16 Load(1650) Distance(11094.72) ->  17 Load(1700) Distance(11144.72) ->  18 Load(1800) Distance(11265.429999999998) ->  29 Load(1850) Distance(11365.429999999998) ->  34 Load(1900) Distance(11765.429999999998) ->  131 Load(2000) Distance(11815.429999999998) ->  129 Load(2100) Distance(11886.139999999998) ->  137 Load(2150) Distance(12056.849999999997) ->  31 Load(2200) Distance(12156.849999999997) ->  28 Load(2250) Distance(12348.269999999997) ->  26 Load(2350) Distance(12489.689999999997) ->  27 Load(2450) Distance(12660.399999999996) ->  30 Load(2500) Distance(12781.109999999995) ->  32 Load(2600) Distance(12831.109999999995) ->  33 Load(2650) Distance(13031.109999999995) ->  75 Load(2750) Distance(13331.109999999995) ->  77 Load(2850) Distance(13401.819999999994) ->  80 Load(2950) Distance(13701.819999999994) ->  78 Load(3050) Distance(13872.529999999993) ->  79 Load(3150) Distance(13922.529999999993) ->  98 Load(3250) Distance(14134.659999999993) ->  95 Load(3350) Distance(14205.369999999992) ->  96 Load(3400) Distance(14326.07999999999) ->  97 Load(3500) Distance(14658.919999999991) ->  91 Load(3600) Distance(14729.62999999999) ->  108 Load(3650) Distance(14850.33999999999) ->  109 Load(3700) Distance(14900.33999999999) ->  93 Load(3800) Distance(14950.33999999999) ->  90 Load(3850) Distance(15071.049999999988) ->  89 Load(3900) Distance(15121.049999999988) ->  88 Load(4000) Distance(18770.189999999988) ->  173 Load(4100) Distance(19120.189999999988) ->  172 Load(4200) Distance(19753.029999999988) ->  174 Load(4250) Distance(19973.739999999987) ->  184 Load(4350) Distance(20465.159999999985) ->  201 Load(4450) Distance(20806.579999999984) ->  551 Load(4550) Distance(20856.579999999984) ->  553 Load(4650) Distance(20906.579999999984) ->  552 Load(4700) Distance(20956.579999999984) ->  550 Load(4800) Distance(21268.709999999985) ->  556 Load(4850) Distance(21368.709999999985) ->  555 Load(4900) Distance(21689.419999999984) ->  558 Load(4950) Distance(23079.369999999984) ->  195 Load(5050) Distance(23150.079999999984) ->  193 Load(5100) Distance(23291.49999999998) ->  199 Load(5150) Distance(23491.49999999998) ->  196 Load(5250) Distance(23591.49999999998) ->  197 Load(5350) Distance(23662.20999999998) ->  562 Load(5400) Distance(23712.20999999998) ->  561 Load(5450) Distance(23762.20999999998) ->  560 Load(5550) Distance(23812.20999999998) ->  564 Load(5600) Distance(23862.20999999998) ->  563 Load(5650) Distance(24112.20999999998) ->  191 Load(5750) Distance(24253.62999999998) ->  189 Load(5850) Distance(24303.62999999998) ->  187 Load(5950) Distance(24445.049999999977) ->  188 Load(6050) Distance(25395.049999999977) ->  175 Load(6100) Distance(25807.17999999998) ->  180 Load(6150) Distance(26098.599999999977) ->  179 Load(6200) Distance(26148.599999999977) ->  178 Load(6250) Distance(26481.439999999977) ->  182 Load(6350) Distance(26552.149999999976) ->  183 Load(6400) Distance(26814.279999999977) ->  177 Load(6450) Distance(28288.539999999975) ->  185 Load(6550) Distance(28942.089999999975) ->  186 Load(6650) Distance(29557.779999999973) ->  565 Load(6750) Distance(30140.619999999974) ->  567 Load(6800) Distance(30711.329999999973) ->  568 Load(6850) Distance(32209.85999999997) ->  215 Load(6900) Distance(32259.85999999997) ->  214 Load(7000) Distance(32701.27999999997) ->  216 Load(7050) Distance(32892.69999999997) ->  217 Load(7150) Distance(33042.69999999997) ->  218 Load(7250) Distance(34192.69999999997) ->  203 Load(7350) Distance(35091.22999999997) ->  566 Load(7450) Distance(35524.06999999996) ->  202 Load(7550) Distance(36360.469999999965) ->  206 Load(7650) Distance(36610.469999999965) ->  207 Load(7750) Distance(36831.179999999964) ->  212 Load(7800) Distance(37051.88999999996) ->  213 Load(7900) Distance(37401.88999999996) ->  205 Load(8000) Distance(37451.88999999996) ->  204 Load(8100) Distance(38093.30999999996) ->  208 Load(8200) Distance(39084.72999999996) ->  355 Load(8250) Distance(45390.35999999996) ->  142 Load(8350) Distance(45440.35999999996) ->  141 Load(8450) Distance(45490.35999999996) ->  114 Load(8550) Distance(45631.779999999955) ->  103 Load(8600) Distance(45852.489999999954) ->  111 Load(8700) Distance(45902.489999999954) ->  110 Load(8800) Distance(46002.489999999954) ->  99 Load(8900) Distance(46173.19999999995) ->  100 Load(8950) Distance(46643.90999999995) ->  105 Load(9000) Distance(46793.90999999995) ->  104 Load(9050) Distance(46985.32999999995) ->  106 Load(9100) Distance(47135.32999999995) ->  107 Load(9150) Distance(47356.03999999995) ->  81 Load(9250) Distance(47476.74999999995) ->  71 Load(9300) Distance(47597.45999999995) ->  70 Load(9350) Distance(47809.589999999946) ->  61 Load(9400) Distance(47880.299999999945) ->  59 Load(9450) Distance(47930.299999999945) ->  58 Load(9500) Distance(48171.71999999994) ->  55 Load(9600) Distance(48221.71999999994) ->  54 Load(9650) Distance(48363.13999999994) ->  51 Load(9700) Distance(48433.84999999994) ->  117 Load(9750) Distance(48483.84999999994) ->  116 Load(9850) Distance(48533.84999999994) ->  119 Load(9950) Distance(54603.08999999994) ->  0 Load(9950) Distance(54603.08999999994)
+Distance of the route: 54603.08999999994m
+Load of the route: 9950
+
+Route for vehicle 645:
+ 0 Load(0) Distance(1257.11) ->  2 Load(100) Distance(8190.5599999999995) ->  256 Load(200) Distance(8240.56) ->  257 Load(300) Distance(8511.269999999999) ->  258 Load(350) Distance(8561.269999999999) ->  259 Load(450) Distance(10089.089999999998) ->  306 Load(500) Distance(10409.799999999997) ->  307 Load(550) Distance(11470.459999999997) ->  542 Load(600) Distance(11520.459999999997) ->  255 Load(700) Distance(13384.669999999998) ->  254 Load(800) Distance(15864.569999999998) ->  49 Load(850) Distance(16214.569999999998) ->  50 Load(900) Distance(16476.699999999997) ->  118 Load(1000) Distance(16526.699999999997) ->  120 Load(1050) Distance(16626.699999999997) ->  52 Load(1100) Distance(16676.699999999997) ->  53 Load(1150) Distance(16747.409999999996) ->  56 Load(1200) Distance(16918.119999999995) ->  57 Load(1250) Distance(17018.119999999995) ->  60 Load(1300) Distance(17218.119999999995) ->  65 Load(1350) Distance(17338.829999999994) ->  69 Load(1400) Distance(17388.829999999994) ->  68 Load(1450) Distance(17609.539999999994) ->  66 Load(1500) Distance(17659.539999999994) ->  67 Load(1550) Distance(17780.249999999993) ->  72 Load(1650) Distance(17850.959999999992) ->  127 Load(1700) Distance(17950.959999999992) ->  126 Load(1750) Distance(18150.959999999992) ->  604 Load(1800) Distance(18221.66999999999) ->  603 Load(1850) Distance(18363.08999999999) ->  83 Load(1900) Distance(18554.509999999987) ->  602 Load(1930) Distance(19516.63999999999) ->  139 Load(2030) Distance(21218.719999999987) ->  169 Load(2130) Distance(21489.429999999986) ->  144 Load(2230) Distance(21839.429999999986) ->  145 Load(2330) Distance(22313.689999999984) ->  146 Load(2430) Distance(22663.689999999984) ->  151 Load(2530) Distance(22713.689999999984) ->  152 Load(2630) Distance(23046.529999999984) ->  147 Load(2730) Distance(23246.529999999984) ->  148 Load(2830) Distance(23317.239999999983) ->  149 Load(2880) Distance(23558.65999999998) ->  167 Load(2980) Distance(23858.65999999998) ->  150 Load(3080) Distance(24353.629999999983) ->  168 Load(3180) Distance(25531.449999999983) ->  601 Load(3210) Distance(26484.99999999998) ->  610 Load(3260) Distance(26534.99999999998) ->  326 Load(3360) Distance(26605.70999999998) ->  335 Load(3410) Distance(27297.12999999998) ->  333 Load(3460) Distance(27397.12999999998) ->  334 Load(3510) Distance(27667.83999999998) ->  330 Load(3610) Distance(27717.83999999998) ->  329 Load(3710) Distance(27767.83999999998) ->  327 Load(3810) Distance(27817.83999999998) ->  328 Load(3860) Distance(28300.67999999998) ->  331 Load(3960) Distance(28650.67999999998) ->  332 Load(4010) Distance(29471.389999999978) ->  337 Load(4060) Distance(30428.499999999978) ->  546 Load(4110) Distance(31164.89999999998) ->  341 Load(4160) Distance(32068.44999999998) ->  343 Load(4210) Distance(32368.44999999998) ->  342 Load(4260) Distance(33196.26999999998) ->  344 Load(4360) Distance(33496.26999999998) ->  345 Load(4390) Distance(34446.26999999998) ->  340 Load(4490) Distance(34587.68999999998) ->  346 Load(4540) Distance(34658.39999999998) ->  347 Load(4590) Distance(35529.10999999998) ->  349 Load(4620) Distance(36432.65999999998) ->  338 Load(4720) Distance(36882.65999999998) ->  339 Load(4820) Distance(37082.65999999998) ->  609 Load(4870) Distance(38010.47999999998) ->  348 Load(4970) Distance(38131.18999999998) ->  350 Load(5020) Distance(38722.60999999998) ->  351 Load(5070) Distance(40914.63999999998) ->  600 Load(5170) Distance(42718.18999999998) ->  353 Load(5270) Distance(42888.89999999998) ->  354 Load(5320) Distance(43630.31999999998) ->  352 Load(5370) Distance(45728.84999999998) ->  336 Load(5420) Distance(47785.95999999998) ->  163 Load(5470) Distance(49729.45999999998) ->  161 Load(5520) Distance(50029.45999999998) ->  165 Load(5570) Distance(50220.879999999976) ->  544 Load(5600) Distance(52048.699999999975) ->  545 Load(5700) Distance(52098.699999999975) ->  143 Load(5800) Distance(53697.229999999974) ->  112 Load(5900) Distance(54100.77999999998) ->  102 Load(5950) Distance(54200.77999999998) ->  101 Load(6000) Distance(54695.74999999998) ->  136 Load(6100) Distance(54766.45999999998) ->  132 Load(6150) Distance(54907.879999999976) ->  133 Load(6200) Distance(55028.589999999975) ->  134 Load(6250) Distance(55099.299999999974) ->  135 Load(6300) Distance(55682.13999999997) ->  73 Load(6350) Distance(55832.13999999997) ->  128 Load(6400) Distance(56202.84999999997) ->  130 Load(6450) Distance(56252.84999999997) ->  125 Load(6500) Distance(56514.97999999997) ->  123 Load(6550) Distance(56564.97999999997) ->  121 Load(6600) Distance(56664.97999999997) ->  122 Load(6650) Distance(56764.97999999997) ->  124 Load(6700) Distance(56835.689999999966) ->  74 Load(6750) Distance(56885.689999999966) ->  41 Load(6800) Distance(56935.689999999966) ->  40 Load(6850) Distance(57006.399999999965) ->  35 Load(6950) Distance(57077.109999999964) ->  36 Load(7000) Distance(57147.81999999996) ->  37 Load(7050) Distance(57218.52999999996) ->  46 Load(7100) Distance(57289.23999999996) ->  45 Load(7150) Distance(63139.23999999996) ->  0 Load(7150) Distance(63139.23999999996)
+Distance of the route: 63139.23999999996m
+Load of the route: 7150
+
+Route for vehicle 646:
+ 0 Load(0) Distance(1362.13) ->  1 Load(100) Distance(5989.95) ->  301 Load(130) Distance(7634.92) ->  270 Load(180) Distance(8067.76) ->  271 Load(230) Distance(10385.53) ->  269 Load(330) Distance(10785.53) ->  268 Load(430) Distance(11047.66) ->  266 Load(530) Distance(11542.63) ->  267 Load(630) Distance(12042.63) ->  265 Load(730) Distance(12492.63) ->  264 Load(830) Distance(12663.339999999998) ->  262 Load(930) Distance(12763.339999999998) ->  260 Load(1030) Distance(12954.759999999998) ->  272 Load(1080) Distance(13175.469999999998) ->  263 Load(1180) Distance(13275.469999999998) ->  261 Load(1280) Distance(13799.729999999998) ->  275 Load(1380) Distance(13870.439999999997) ->  273 Load(1480) Distance(13970.439999999997) ->  274 Load(1530) Distance(14723.989999999996) ->  276 Load(1630) Distance(16526.069999999996) ->  611 Load(1730) Distance(19579.619999999995) ->  637 Load(1830) Distance(21350.329999999994) ->  638 Load(1880) Distance(21662.459999999995) ->  639 Load(1930) Distance(22952.409999999996) ->  302 Load(2030) Distance(26609.519999999997) ->  287 Load(2130) Distance(26750.939999999995) ->  286 Load(2230) Distance(29355.099999999995) ->  296 Load(2280) Distance(30946.519999999997) ->  644 Load(2380) Distance(30996.519999999997) ->  643 Load(2430) Distance(31446.519999999997) ->  285 Load(2530) Distance(32362.209999999995) ->  284 Load(2630) Distance(33407.17999999999) ->  293 Load(2680) Distance(33507.17999999999) ->  292 Load(2710) Distance(33657.17999999999) ->  294 Load(2760) Distance(33727.88999999999) ->  295 Load(2790) Distance(33919.30999999999) ->  291 Load(2820) Distance(33969.30999999999) ->  290 Load(2870) Distance(35554.22999999999) ->  283 Load(2970) Distance(35754.22999999999) ->  540 Load(3020) Distance(35804.22999999999) ->  541 Load(3070) Distance(38785.59999999999) ->  277 Load(3170) Distance(38835.59999999999) ->  278 Load(3270) Distance(39309.85999999999) ->  279 Load(3370) Distance(39409.85999999999) ->  280 Load(3470) Distance(40280.56999999999) ->  282 Load(3570) Distance(40642.69999999999) ->  281 Load(3670) Distance(41824.06999999999) ->  288 Load(3770) Distance(42086.19999999999) ->  289 Load(3870) Distance(49228.83999999999) ->  297 Load(3970) Distance(50270.25999999999) ->  298 Load(4070) Distance(51332.389999999985) ->  299 Load(4170) Distance(51832.389999999985) ->  300 Load(4270) Distance(57285.07999999999) ->  303 Load(4370) Distance(58283.609999999986) ->  304 Load(4470) Distance(62623.55999999998) ->  311 Load(4570) Distance(63123.55999999998) ->  313 Load(4620) Distance(63844.26999999998) ->  312 Load(4670) Distance(64594.26999999998) ->  310 Load(4770) Distance(66520.61999999998) ->  315 Load(4870) Distance(66570.61999999998) ->  316 Load(4920) Distance(67632.74999999999) ->  317 Load(4970) Distance(67682.74999999999) ->  318 Load(5020) Distance(70236.29999999999) ->  319 Load(5070) Distance(70286.29999999999) ->  320 Load(5170) Distance(70357.01) ->  321 Load(5220) Distance(70407.01) ->  322 Load(5270) Distance(70457.01) ->  323 Load(5320) Distance(71781.26999999999) ->  614 Load(5370) Distance(71881.26999999999) ->  615 Load(5420) Distance(71931.26999999999) ->  616 Load(5470) Distance(72738.37999999999) ->  613 Load(5520) Distance(74866.2) ->  391 Load(5620) Distance(76916.81) ->  370 Load(5720) Distance(77108.23) ->  371 Load(5820) Distance(77228.94) ->  373 Load(5920) Distance(77703.2) ->  383 Load(5970) Distance(77753.2) ->  382 Load(6020) Distance(77803.2) ->  381 Load(6070) Distance(77923.91) ->  380 Load(6170) Distance(78065.33) ->  384 Load(6220) Distance(78215.33) ->  385 Load(6320) Distance(78265.33) ->  377 Load(6420) Distance(78515.33) ->  375 Load(6520) Distance(79381.02) ->  372 Load(6570) Distance(80508.84000000001) ->  474 Load(6620) Distance(82962.39000000001) ->  357 Load(6720) Distance(83836.65000000001) ->  378 Load(6820) Distance(84298.78000000001) ->  356 Load(6920) Distance(85885.18000000001) ->  359 Load(7020) Distance(87292.29000000001) ->  598 Load(7070) Distance(87342.29000000001) ->  599 Load(7120) Distance(87413.00000000001) ->  597 Load(7170) Distance(89215.08000000002) ->  361 Load(7270) Distance(89356.50000000001) ->  596 Load(7320) Distance(89477.21000000002) ->  360 Load(7420) Distance(89947.92000000003) ->  589 Load(7520) Distance(90397.92000000003) ->  591 Load(7570) Distance(90539.34000000003) ->  592 Load(7620) Distance(91113.60000000002) ->  593 Load(7670) Distance(92553.55000000002) ->  590 Load(7720) Distance(93024.26000000002) ->  364 Load(7820) Distance(93074.26000000002) ->  363 Load(7920) Distance(93124.26000000002) ->  362 Load(8020) Distance(93174.26000000002) ->  365 Load(8120) Distance(94709.18000000002) ->  366 Load(8220) Distance(94909.18000000002) ->  605 Load(8270) Distance(95129.89000000003) ->  606 Load(8320) Distance(98429.03000000003) ->  594 Load(8370) Distance(98649.74000000003) ->  595 Load(8420) Distance(103482.58000000003) ->  211 Load(8520) Distance(104389.69000000003) ->  210 Load(8620) Distance(104751.82000000004) ->  548 Load(8670) Distance(105134.66000000003) ->  209 Load(8770) Distance(108234.66000000003) ->  162 Load(8820) Distance(109928.16000000003) ->  166 Load(8920) Distance(110690.29000000004) ->  543 Load(8970) Distance(112313.08000000003) ->  164 Load(9020) Distance(113656.58000000003) ->  113 Load(9120) Distance(113798.00000000003) ->  115 Load(9220) Distance(114618.71000000004) ->  84 Load(9320) Distance(115172.26000000004) ->  82 Load(9370) Distance(115692.97000000004) ->  62 Load(9420) Distance(115905.10000000005) ->  64 Load(9450) Distance(115955.10000000005) ->  63 Load(9500) Distance(116205.10000000005) ->  43 Load(9550) Distance(116355.10000000005) ->  138 Load(9580) Distance(116546.52000000005) ->  39 Load(9630) Distance(116617.23000000005) ->  47 Load(9680) Distance(116667.23000000005) ->  48 Load(9730) Distance(116717.23000000005) ->  44 Load(9780) Distance(116908.65000000005) ->  42 Load(9830) Distance(117008.65000000005) ->  38 Load(9930) Distance(122991.49000000005) ->  0 Load(9930) Distance(122991.49000000005)
+Distance of the route: 122991.49000000005m
+Load of the route: 9930
+
+Total distance of all routes: 3478499.8000m
+Total load of all routes: 47020
+Total number of routes: 647
+[Finished in 67.898s]
+
 --------------------------------------------------------------------------
+
+Yes! It's showing the distances! But route 642 has a total distance of ~3,132,438m.
+Which means a few disallowed arcs of length 1,000,000 were included.
+There is the possibility of some nodes aren't connected at all, and all its arcs are disallowed.
+Yes, line 1048 of BOPMid_full_matrix.txt is completely zeros.
+I'll put in a check.
+
+Okay so I've created check_node_connection() in vrp_instance.
+
+Now I want the solution to print out something every time a disallowed arc is used. In print_solution:
+
+    scaled_route_distance = routing.GetArcCostForVehicle(previous_index, index, vehicle_id)
+    distance = scaled_route_distance / precision_scale
+    print(distance)
+    if math.isclose(distance, 1000000):
+        print("disallowed arc used from node " + node_index)
+
+Which prints out:
 --------------------------------------------------------------------------
+
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+
+Route for vehicle 642:
+....424 Load(6080) Distance(57677.37999999998) ->  456 Load(6130) Distance(1057677.38) ->  390 Load(6230) Distance(2057677.38) ->  463 Load(6280) Distance(3057677.38) ->  512 Load(6310) Distance(3057727.38) ->  513 Load(6410) Distance(3062033.01)....
+Distance of the route: 3132438.679999998m
+
 --------------------------------------------------------------------------
+
+
+Looks like 512 has a 0 distance in the solution. Shouldn't it be 1000000?
+check_node_connection() says 512 has 1 connection, and arcs_details() says that 512->513 is 50.0, which means that the distance printed out in the solution is shifted to the left.
+Let's fix that.
 --------------------------------------------------------------------------
+
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+Solver status:  1
+disallowed arc used from node 456
+disallowed arc used from node 390
+disallowed arc used from node 463
+Route for vehicle 642:
+.....[424] - 50.0m ->  [456] - 1000000.0m ->  [390] - 1000000.0m ->  [463] - 1000000.0m ->  [512] - 50.0m ->  [513]....
+
 --------------------------------------------------------------------------
+
+
+Ah. Makes sense. The nodes with one connection are put on ends, and the nodes with 0 connections in the middle to reduce the number of 1,000,000m arcs being used.
+
+We should do a check_node_connection() and remove nodes that fail, before feeding the problem into or-tools.
+But we can't remove the nodes during the add_node() step, because future nodes could give the node the connection it needs.
+
+The entire issue originates from the way the distances between weeds were calculated with A*
+See my Honours paper for details.
+
+Well, I will mostly be using benchmark instances, but I will be needing to solve the weed problem for RQ2.
+It's good to have this check, anyway.
+
+The check should occur in file_processor....or should it? Arrg.
+Okay, you know what? We'll put it in file_processor for now.
+We can't sum over the distance matrix row as a way to test for disconnected nodes, because a node could have only one connection, and thus have a non-zero result.
+But how can we check? Okay, import_from_vrp_file() currently only reads the lower diagonal part of the matrix.
+Let's have it read everything, but only input the lower part of the matrix into add_node()
+
+    if line.startswith('EDGE_WEIGHT_SECTION'):
+          print("EDGE_WEIGHT_SECTION true")
+          vrp_instance.edge_weights_given = True
+          line = vrp_file.readline()  # skip depot line
+          # Assumes symmetry
+          disconnected_nodes = []
+          for i in range(dimension - 1):
+              line = vrp_file.readline()
+
+              distance_line = line.split()  # read entire line.
+
+              # check num node connections:
+              num_connections = 0
+              for connection in distance_line:
+                  if float(connection) != 0:
+                      num_connections += 1
+              if num_connections < 2:
+                  disconnected_nodes.append(i+1)
+              print("node {} connections: {}".format(i, num_connections))
+
+              lower_diag_line = distance_line[:i + 1]
+
+Let's see if this check in file_processor gives the same results as check_node_connection():
+--------------------------------------------------------------------------
+
+[390, 456, 463, 512]
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+
+--------------------------------------------------------------------------
+
+
+Cool. Now I just need to have import_from_vrp_file() check if the node is in disconnected_nodes before calling add_node().
+
+Nope. I've changed my tack. There is a possibility that the arc connections will become valid (i.e. the vehicle will find a path during execution).
+Which means that we can't just discard nodes before adding them to the model.
+True, the capability to deal with dynamic travel distance won't be ever used in my PhD, but it's highly likely to happen for AutoWeed, the application vehicle.
+
+As a quick-and-dirty solution, I've created get_connected_nodes(), get_disconnected_node_ids(), and get_connected_distance_matrix() as a way to deal with the connect nodes only.
+I've considered making nodes and arcs a property, so that getting them will only return the connected nodes.
+But I also want to access the original nodes and I'm not sure if I can do that with property. I'll look into it more later?
+I know there are a lot better ways of doing this, but I don't have to deal with dynamic nodes till RQ2 so I'll just use the bandaid.....why don't I use property as a bandaid for now?
+Oh right, because it would check every single time add_node() is called at the start, since add_node uses self.nodes.
+How annoying.
+
+We test in sandbox:
+  distance_matrix = weed_problem.get_distance_matrix()
+  connected_distance_matrix = weed_problem.get_connected_distance_matrix()
+  print(distance_matrix[389:392, :5])  # nodes 389, 390 & 391, first 5 arcs
+  print(connected_distance_matrix[389:392, :5])
+  print(distance_matrix.shape)
+  print(connected_distance_matrix.shape)
+
+--------------------------------------------------------------------------
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+[390, 456, 463, 512]
+647
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+643
+name = BOPMid_full_matrix
+Vehicle.demand_capacity = 80000
+Vehicle.fuel_capacity = 18
+Vehicle.fuel_consumption = 0.08
+Depot.id = 0
+Depot.location = [0, 0]
+edge weights given = True
+dimension 647
+arcs in instance: 417963
+node 390 only has 0 connections
+node 456 only has 1 connections
+node 463 only has 0 connections
+node 512 only has 1 connections
+[[  25017.26   24545.94   23799.49   24632.95   23909.9 ]
+ [1000000.   1000000.   1000000.   1000000.   1000000.  ]
+ [  24843.96   24372.64   23626.2    24459.65   24125.95]]
+[[25017.26 24545.94 23799.49 24632.95 23909.9 ]
+ [24843.96 24372.64 23626.2  24459.65 24125.95]
+ [27568.23 27096.91 26350.46 27183.91 26636.61]]
+(647, 647)
+(643, 643)
+
+--------------------------------------------------------------------------
+
+You can see that the original matrix is a 647x647, then after the 4 disconnected nodes are remove, it becomes a 643x643.
+The first five columns for rows 389, 390 & 391 are printed twice, first time with disconnected node 390, and 2nd time without.
+
+Feeding only connected nodes into ortools:
+--------------------------------------------------------------------------
+
+Route for vehicle 637:
+ [0] - 0.0m ->  0 Load(0) Distance(0.0)
+Distance of the route: 0.0m
+Load of the route: 0
+
+Route for vehicle 638:
+ [0] - 553.55m ->  [3] - 5348.53m ->  [15] - 782.84m ->  [32] - 241.42m ->  [76] - 241.42m ->  [85] - 150.0m ->  [87] - 141.42m ->  [90] - 120.71m ->  [89] - 7307.11m ->  [194] - 70.71m ->  [193] - 662.13m ->  [192] - 5391.42m ->  [228] - 1789.95m ->  [241] - 50.0m ->  [240] - 520.71m ->  [233] - 170.71m ->  [565] - 450.0m ->  [237] - 332.84m ->  [242] - 1522.79m ->  [251] - 550.0m ->  [252] - 919.24m ->  [249] - 1107.11m ->  [248] - 615.69m ->  [232] - 120.71m ->  [231] - 150.0m ->  [230] - 262.13m ->  [229] - 241.42m ->  [227] - 332.84m ->  [223] - 50.0m ->  [222] - 270.71m ->  [221] - 50.0m ->  [220] - 100.0m ->  [224] - 50.0m ->  [226] - 150.0m ->  [225] - 1765.69m ->  [219] - 6607.11m ->  [594] - 4276.96m ->  [473] - 300.0m ->  [474] - 50.0m ->  [475] - 1107.11m ->  [533] - 1048.53m ->  [603] - 1831.37m ->  [534] - 250.0m ->  [535] - 320.71m ->  [477] - 191.42m ->  [479] - 403.55m ->  [613] - 1847.06m ->  [453] - 170.71m ->  [451] - 820.71m ->  [485] - 665.69m ->  [506] - 841.42m ->  [450] - 665.69m ->  [393] - 241.42m ->  [394] - 612.13m ->  [452] - 982.84m ->  [408] - 50.0m ->  [409] - 70.71m ->  [413] - 70.71m ->  [414] - 170.71m ->  [455] - 70.71m ->  [446] - 100.0m ->  [464] - 50.0m ->  [463] - 141.42m ->  [423] - 70.71m ->  [422] - 70.71m ->  [454] - 120.71m ->  [416] - 100.0m ->  [412] - 120.71m ->  [415] - 50.0m ->  [411] - 70.71m ->  [400] - 70.71m ->  [402] - 50.0m ->  [469] - 150.0m ->  [403] - 70.71m ->  [470] - 50.0m ->  [404] - 120.71m ->  [401] - 653.55m ->  [387] - 100.0m ->  [386] - 70.71m ->  [388] - 474.26m ->  [379] - 300.0m ->  [377] - 120.71m ->  [384] - 150.0m ->  [385] - 3659.19m ->  [389] - 1044.97m ->  [357] - 874.26m ->  [378] - 474.26m ->  [472] - 1119.24m ->  [512] - 100.0m ->  [511] - 120.71m ->  [513] - 2062.13m ->  [608] - 2662.74m ->  [609] - 4768.38m ->  [509] - 2097.06m ->  [507] - 420.71m ->  [508] - 550.0m ->  [486] - 50.0m ->  [487] - 1207.11m ->  [499] - 212.13m ->  [505] - 391.42m ->  [504] - 220.71m ->  [491] - 270.71m ->  [500] - 403.55m ->  [498] - 750.0m ->  [497] - 100.0m ->  [490] - 862.13m ->  [495] - 50.0m ->  [488] - 250.0m ->  [493] - 70.71m ->  [494] - 403.55m ->  [492] - 50.0m ->  [502] - 120.71m ->  [489] - 170.71m ->  [501] - 50.0m ->  [503] - 470.71m ->  [496] - 2944.97m ->  [519] - 2097.06m ->  [637] - 474.26m ->  [638] - 1310.66m ->  [532] - 612.13m ->  [531] - 150.0m ->  [530] - 491.42m ->  [636] - 1053.55m ->  [516] - 120.71m ->  [518] - 50.0m ->  [517] - 262.13m ->  [515] - 662.13m ->  [514] - 9795.94m ->  [641] - 8440.56m ->  [308] - 100.0m ->  [309] - 1241.42m ->  [314] - 1424.26m ->  [315] - 50.0m ->  [316] - 1062.13m ->  [317] - 50.0m ->  [318] - 11137.36m ->  [305] - 7259.19m ->  [267] - 550.0m ->  [268] - 400.0m ->  [269] - 9616.3m ->  0 Load(9980) Distance(146941.38000000006)
+Distance of the route: 146941.38000000006m
+Load of the route: 9980
+
+Route for vehicle 639:
+ [0] - 1257.11m ->  [2] - 8707.11m ->  [266] - 312.13m ->  [265] - 450.0m ->  [264] - 170.71m ->  [262] - 100.0m ->  [260] - 191.42m ->  [272] - 220.71m ->  [263] - 100.0m ->  [261] - 524.26m ->  [275] - 70.71m ->  [273] - 100.0m ->  [274] - 753.55m ->  [276] - 1802.08m ->  [607] - 3053.55m ->  [633] - 1770.71m ->  [634] - 312.13m ->  [635] - 1289.95m ->  [302] - 3657.11m ->  [287] - 141.42m ->  [286] - 2604.16m ->  [296] - 1591.42m ->  [640] - 50.0m ->  [639] - 450.0m ->  [285] - 915.69m ->  [284] - 1044.97m ->  [293] - 100.0m ->  [292] - 150.0m ->  [294] - 70.71m ->  [295] - 191.42m ->  [291] - 50.0m ->  [290] - 1584.92m ->  [283] - 200.0m ->  [536] - 50.0m ->  [537] - 2981.37m ->  [277] - 50.0m ->  [278] - 474.26m ->  [279] - 100.0m ->  [280] - 870.71m ->  [282] - 362.13m ->  [281] - 1181.37m ->  [288] - 262.13m ->  [289] - 7142.64m ->  [297] - 1041.42m ->  [298] - 1062.13m ->  [299] - 500.0m ->  [300] - 5452.69m ->  [303] - 998.53m ->  [304] - 4339.95m ->  [311] - 500.0m ->  [313] - 720.71m ->  [312] - 750.0m ->  [310] - 5519.24m ->  [324] - 100.0m ->  [325] - 1915.69m ->  [319] - 50.0m ->  [320] - 70.71m ->  [321] - 50.0m ->  [322] - 50.0m ->  [323] - 1324.26m ->  [610] - 100.0m ->  [611] - 50.0m ->  [612] - 2420.71m ->  [390] - 2050.61m ->  [370] - 191.42m ->  [371] - 120.71m ->  [373] - 474.26m ->  [383] - 50.0m ->  [382] - 50.0m ->  [381] - 120.71m ->  [380] - 120.71m ->  [376] - 150.0m ->  [375] - 50.0m ->  [374] - 712.13m ->  [372] - 882.84m ->  [367] - 50.0m ->  [368] - 550.0m ->  [471] - 2236.4m ->  [356] - 820.71m ->  [358] - 1689.95m ->  [596] - 1219.24m ->  [359] - 1486.4m ->  [595] - 70.71m ->  [593] - 1802.08m ->  [361] - 141.42m ->  [592] - 120.71m ->  [360] - 470.71m ->  [585] - 450.0m ->  [587] - 141.42m ->  [588] - 574.26m ->  [589] - 1439.95m ->  [586] - 470.71m ->  [364] - 50.0m ->  [363] - 50.0m ->  [362] - 50.0m ->  [365] - 1534.92m ->  [366] - 200.0m ->  [601] - 220.71m ->  [602] - 3299.14m ->  [590] - 3379.9m ->  [576] - 150.0m ->  [577] - 200.0m ->  [578] - 200.0m ->  [579] - 262.13m ->  [580] - 891.42m ->  [581] - 1119.24m ->  [253] - 927.82m ->  [250] - 424.26m ->  [247] - 50.0m ->  [245] - 100.0m ->  [246] - 120.71m ->  [244] - 70.71m ->  [243] - 932.84m ->  [238] - 120.71m ->  [239] - 150.0m ->  [236] - 70.71m ->  [235] - 120.71m ->  [234] - 8912.13m ->  [555] - 300.0m ->  [553] - 70.71m ->  [550] - 70.71m ->  [545] - 836.4m ->  [171] - 4062.74m ->  [88] - 170.71m ->  [86] - 844.97m ->  [25] - 141.42m ->  [24] - 50.0m ->  [23] - 674.26m ->  [13] - 6171.32m ->  0 Load(10250) Distance(130187.96000000008)
+Distance of the route: 130187.96000000008m
+Load of the route: 10250
+
+Route for vehicle 640:
+ [0] - 8480.51m ->  [140] - 3564.82m ->  [160] - 1198.53m ->  [153] - 612.13m ->  [154] - 312.13m ->  [155] - 494.97m ->  [156] - 241.42m ->  [158] - 441.42m ->  [159] - 453.55m ->  [157] - 1053.55m ->  [543] - 4444.97m ->  [338] - 1012.13m ->  [350] - 591.42m ->  [351] - 3342.03m ->  [510] - 898.53m ->  [604] - 2159.19m ->  [369] - 1610.66m ->  [391] - 282.84m ->  [392] - 50.0m ->  [396] - 150.0m ->  [399] - 50.0m ->  [458] - 50.0m ->  [398] - 120.71m ->  [459] - 50.0m ->  [395] - 100.0m ->  [397] - 70.71m ->  [457] - 50.0m ->  [456] - 70.71m ->  [405] - 50.0m ->  [406] - 50.0m ->  [410] - 120.71m ->  [407] - 150.0m ->  [430] - 100.0m ->  [431] - 220.71m ->  [467] - 150.0m ->  [432] - 70.71m ->  [460] - 120.71m ->  [433] - 100.0m ->  [444] - 70.71m ->  [445] - 50.0m ->  [443] - 70.71m ->  [434] - 120.71m ->  [436] - 50.0m ->  [435] - 50.0m ->  [468] - 50.0m ->  [437] - 100.0m ->  [439] - 120.71m ->  [442] - 70.71m ->  [441] - 100.0m ->  [465] - 120.71m ->  [420] - 50.0m ->  [421] - 70.71m ->  [462] - 70.71m ->  [461] - 220.71m ->  [466] - 220.71m ->  [419] - 50.0m ->  [418] - 50.0m ->  [417] - 553.55m ->  [425] - 241.42m ->  [424] - 420.71m ->  [426] - 120.71m ->  [449] - 270.71m ->  [428] - 70.71m ->  [429] - 70.71m ->  [448] - 120.71m ->  [440] - 50.0m ->  [438] - 150.0m ->  [447] - 50.0m ->  [427] - 500.0m ->  [476] - 120.71m ->  [642] - 812.13m ->  [478] - 450.0m ->  [614] - 50.0m ->  [615] - 50.0m ->  [481] - 827.82m ->  [616] - 50.0m ->  [617] - 50.0m ->  [618] - 50.0m ->  [621] - 424.26m ->  [482] - 753.55m ->  [521] - 341.42m ->  [522] - 141.42m ->  [523] - 400.0m ->  [524] - 150.0m ->  [525] - 574.26m ->  [527] - 470.71m ->  [526] - 1000.0m ->  [520] - 200.0m ->  [528] - 400.0m ->  [627] - 100.0m ->  [628] - 141.42m ->  [529] - 291.42m ->  [632] - 50.0m ->  [631] - 50.0m ->  [630] - 50.0m ->  [626] - 70.71m ->  [625] - 100.0m ->  [620] - 50.0m ->  [619] - 50.0m ->  [624] - 50.0m ->  [629] - 50.0m ->  [622] - 50.0m ->  [623] - 641.42m ->  [484] - 50.0m ->  [483] - 1119.24m ->  [480] - 4864.21m ->  [584] - 1012.13m ->  [583] - 70.71m ->  [582] - 3471.32m ->  [566] - 120.71m ->  [567] - 370.71m ->  [568] - 770.71m ->  [569] - 841.42m ->  [570] - 1132.84m ->  [574] - 282.84m ->  [573] - 70.71m ->  [575] - 50.0m ->  [572] - 70.71m ->  [571] - 3564.21m ->  [591] - 4832.84m ->  [211] - 907.11m ->  [210] - 362.13m ->  [544] - 382.84m ->  [209] - 3100.0m ->  [162] - 1693.5m ->  [166] - 762.13m ->  [539] - 1622.79m ->  [164] - 1643.5m ->  [112] - 853.55m ->  [84] - 291.42m ->  [106] - 150.0m ->  [107] - 200.0m ->  [82] - 520.71m ->  [62] - 320.71m ->  [55] - 50.0m ->  [54] - 141.42m ->  [51] - 70.71m ->  [117] - 50.0m ->  [116] - 50.0m ->  [119] - 6069.24m ->  0 Load(9640) Distance(88414.41999999997)
+Distance of the route: 88414.41999999997m
+Load of the route: 9640
+
+Route for vehicle 641:
+ [0] - 1362.13m ->  [1] - 4627.82m ->  [301] - 1644.97m ->  [270] - 432.84m ->  [271] - 2250.0m ->  [256] - 50.0m ->  [257] - 270.71m ->  [258] - 50.0m ->  [259] - 1527.82m ->  [306] - 320.71m ->  [307] - 1060.66m ->  [538] - 50.0m ->  [255] - 1864.21m ->  [254] - 2479.9m ->  [49] - 350.0m ->  [50] - 262.13m ->  [118] - 50.0m ->  [120] - 100.0m ->  [52] - 50.0m ->  [53] - 70.71m ->  [56] - 170.71m ->  [57] - 100.0m ->  [60] - 200.0m ->  [65] - 120.71m ->  [69] - 50.0m ->  [68] - 220.71m ->  [66] - 50.0m ->  [67] - 120.71m ->  [72] - 70.71m ->  [127] - 100.0m ->  [126] - 200.0m ->  [600] - 70.71m ->  [599] - 141.42m ->  [83] - 191.42m ->  [598] - 962.13m ->  [139] - 1702.08m ->  [169] - 270.71m ->  [144] - 350.0m ->  [145] - 474.26m ->  [146] - 350.0m ->  [151] - 50.0m ->  [152] - 332.84m ->  [147] - 200.0m ->  [148] - 70.71m ->  [149] - 241.42m ->  [167] - 300.0m ->  [150] - 494.97m ->  [168] - 1177.82m ->  [597] - 953.55m ->  [606] - 50.0m ->  [326] - 70.71m ->  [335] - 691.42m ->  [333] - 100.0m ->  [334] - 270.71m ->  [330] - 50.0m ->  [329] - 50.0m ->  [327] - 50.0m ->  [328] - 482.84m ->  [331] - 350.0m ->  [332] - 820.71m ->  [337] - 957.11m ->  [542] - 736.4m ->  [341] - 903.55m ->  [343] - 300.0m ->  [342] - 827.82m ->  [344] - 300.0m ->  [345] - 950.0m ->  [340] - 141.42m ->  [346] - 70.71m ->  [347] - 870.71m ->  [349] - 500.0m ->  [348] - 782.84m ->  [339] - 200.0m ->  [605] - 1672.79m ->  [353] - 170.71m ->  [354] - 741.42m ->  [352] - 2098.53m ->  [336] - 2057.11m ->  [163] - 1943.5m ->  [161] - 300.0m ->  [165] - 191.42m ->  [540] - 1827.82m ->  [541] - 50.0m ->  [143] - 1474.26m ->  [113] - 141.42m ->  [115] - 332.84m ->  [102] - 100.0m ->  [101] - 432.84m ->  [105] - 150.0m ->  [104] - 220.71m ->  [134] - 312.13m ->  [81] - 120.71m ->  [71] - 120.71m ->  [70] - 212.13m ->  [61] - 70.71m ->  [59] - 50.0m ->  [58] - 320.71m ->  [64] - 50.0m ->  [63] - 312.13m ->  [138] - 150.0m ->  [43] - 120.71m ->  [42] - 100.0m ->  [38] - 100.0m ->  [44] - 50.0m ->  [48] - 50.0m ->  [47] - 70.71m ->  [39] - 120.71m ->  [46] - 70.71m ->  [45] - 5850.0m ->  0 Load(7100) Distance(61296.58999999995)
+Distance of the route: 61296.58999999995m
+Load of the route: 7100
+
+Route for vehicle 642:
+ [0] - 3689.95m ->  [170] - 541.42m ->  [8] - 1252.08m ->  [6] - 50.0m ->  [5] - 50.0m ->  [7] - 220.71m ->  [4] - 1110.66m ->  [9] - 524.26m ->  [10] - 1050.0m ->  [11] - 757.11m ->  [12] - 570.71m ->  [21] - 150.0m ->  [22] - 794.97m ->  [14] - 341.42m ->  [20] - 50.0m ->  [19] - 120.71m ->  [16] - 70.71m ->  [17] - 50.0m ->  [18] - 120.71m ->  [29] - 100.0m ->  [34] - 400.0m ->  [131] - 50.0m ->  [129] - 70.71m ->  [137] - 170.71m ->  [31] - 100.0m ->  [28] - 191.42m ->  [26] - 141.42m ->  [27] - 170.71m ->  [30] - 200.0m ->  [33] - 200.0m ->  [75] - 300.0m ->  [77] - 70.71m ->  [80] - 300.0m ->  [78] - 170.71m ->  [79] - 50.0m ->  [98] - 212.13m ->  [95] - 70.71m ->  [96] - 120.71m ->  [97] - 332.84m ->  [91] - 70.71m ->  [108] - 50.0m ->  [93] - 70.71m ->  [94] - 100.0m ->  [109] - 100.0m ->  [92] - 3444.11m ->  [173] - 350.0m ->  [172] - 632.84m ->  [174] - 220.71m ->  [184] - 491.42m ->  [201] - 341.42m ->  [547] - 50.0m ->  [549] - 50.0m ->  [548] - 50.0m ->  [546] - 312.13m ->  [552] - 100.0m ->  [551] - 320.71m ->  [554] - 1389.95m ->  [195] - 70.71m ->  [198] - 50.0m ->  [199] - 70.71m ->  [200] - 50.0m ->  [196] - 100.0m ->  [197] - 70.71m ->  [558] - 50.0m ->  [557] - 50.0m ->  [556] - 50.0m ->  [560] - 50.0m ->  [559] - 250.0m ->  [191] - 150.0m ->  [190] - 50.0m ->  [189] - 50.0m ->  [187] - 141.42m ->  [188] - 950.0m ->  [175] - 412.13m ->  [180] - 191.42m ->  [181] - 270.71m ->  [176] - 500.0m ->  [179] - 50.0m ->  [178] - 332.84m ->  [182] - 70.71m ->  [183] - 262.13m ->  [177] - 1474.26m ->  [185] - 653.55m ->  [186] - 615.69m ->  [561] - 582.84m ->  [563] - 570.71m ->  [564] - 1498.53m ->  [215] - 50.0m ->  [214] - 441.42m ->  [216] - 191.42m ->  [217] - 150.0m ->  [218] - 1150.0m ->  [203] - 898.53m ->  [562] - 432.84m ->  [202] - 836.4m ->  [206] - 250.0m ->  [207] - 220.71m ->  [212] - 220.71m ->  [213] - 350.0m ->  [205] - 50.0m ->  [204] - 641.42m ->  [208] - 991.42m ->  [355] - 6305.63m ->  [142] - 50.0m ->  [141] - 50.0m ->  [114] - 141.42m ->  [103] - 220.71m ->  [111] - 50.0m ->  [110] - 100.0m ->  [99] - 170.71m ->  [100] - 441.42m ->  [136] - 70.71m ->  [132] - 141.42m ->  [133] - 150.0m ->  [135] - 582.84m ->  [73] - 150.0m ->  [128] - 370.71m ->  [130] - 50.0m ->  [125] - 262.13m ->  [123] - 50.0m ->  [121] - 100.0m ->  [122] - 100.0m ->  [124] - 70.71m ->  [74] - 50.0m ->  [41] - 50.0m ->  [40] - 70.71m ->  [35] - 70.71m ->  [36] - 70.71m ->  [37] - 5841.42m ->  0 Load(9700) Distance(55428.80999999994)
+Distance of the route: 55428.80999999994m
+Load of the route: 9700
+
+Total distance of all routes: 482269.1600m
+Total load of all routes: 46670
+Total number of routes: 643
+[Finished in 56.364s]
+
+--------------------------------------------------------------------------
+There are no routes with a distance above 1,000,000. Excellent.
+If only I could visualise these routes....and overlay over the original drone imagery!
+Well, one can dream....it would be fun but I have better things to do.
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
