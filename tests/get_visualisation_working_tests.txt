@@ -310,3 +310,86 @@ for loc_idx in route:
 C:\Users\jc321076\github\or-tools>python tests/cfvrp_routing_svg.py --capacity --solution > tests/cvrp_solution.svg
 
 Worked. Now for the full Weed instance. We use the same parameters as Weed_instance.cc
+
+----------------------------------------------------------------------------------------
+This is a continuation from get_solver_integration_ready.txt in the parent file, line 4708.
+
+I now have modules to model the VRP instance, and data is passed into the ortools solver from these classes.
+I am working off external_data_routing.py, again, in the main parent folder Code/ .
+
+The first thing I will do is add the SVG functions directly into the file.
+Later, I will make the SVG stuff a module so that it doesn't cramp up the file.
+
+I've created some variables to enable easy adjustments:
+
+    self.block_size = 100
+    self.num_block = 15
+
+Added some more colours, and move white to the start:
+
+    self._colors = [('white', r'#FFFFFF'), ('blue', r'#4285F4'),
+                    ('red', r'#EA4335'), ('yellow', r'#FBBC05'),
+                    ('green', r'#34A853'), ('black', r'#101010'),
+                    ('teal', r'#009688'), ('cyan', r'#00BCD4'),
+                    ('indigo', r'#3F51B5'), ('brown', r'#795548'),
+                    ('purple', r'#512DA8'), ('olive', r'#AFB42B')]
+
+The issue is that white turns up as one of the route colours.
+The node id is also written in the route colour, and because the node background is white, the white node id becomes unreadable.
+I think the easiest way to get around this is to set black as the node id colour.
+
+Another thing to fix is the grid size.
+Currently it has to be hard coded in SVGPrinter, and as a square grid.
+It's not great because if, say node1's coordinate was (100,5), while all the other node locations where closer to depot like (2,3) etc, the currently SVGPrinter would make a 100x100 grid.
+So I'd like to automatically adjust the grid to just be big enough for all the nodes.
+To do that, I need to know the range of node coordinates, in both the x and y directions.
+
+    def get_coordinates_range(self):
+        x_coord = []
+        y_coord = []
+        for node in self.nodes:
+            x, y = node.location
+            x_coord.append(x)
+            y_coord.append(y)
+        x_min = min(x_coord)
+        x_max = max(x_coord)
+        y_min = min(y_coord)
+        y_max = max(y_coord)
+        return [x_max, y_max]
+
+I fed these numbers into SVGPrinter and it worked like a charm.
+Might be tricky if node coordinates are negative, though.
+
+Let's check Christofides_01 next, I know that VRP instance has some negative coordinates.
+Ugh, the route indices in Christofides01 are higher than the number of colours I have, which threw an error from:
+
+    def draw_routes(self):
+        for route_idx, route in enumerate(self.routes()):
+            color = self._color_palette.value(route_idx + 1)
+            colorname = self._color_palette.name(route_idx + 1)
+            self.draw_route(route, color, colorname)
+
+The number of routes is really high because there is one for each dummy vehicle.
+And I set the number of dummy vehicles = number of nodes.
+Because I have to set some number of vehicles, and the number of nodes is the highest upper bound - I was playing it safe.
+The entire dummy vehicle thing needs to be fixed at some point, but not now.
+I need to cycle through the colours and reuse them.
+Okay, I've used from itertools import cycle:
+
+def draw_routes(self):
+    color_cycle = cycle(self._color_palette.colors)
+    for route_idx, route in enumerate(self.routes()):
+        next_color = next(color_cycle)
+        color = next_color[1]
+        colorname = next_color[0]
+        self.draw_route(route, color, colorname)
+
+Seems to work. Let's get back to the negative grid.
+We'll need the min for x and y as well.
+So I adjust get_coordinates_range(self) to return:
+    return [x_min, x_max, y_min, y_max]
+
+And then adjust draw_grid() to start from the min values instead of zero:
+
+
+I'd also like to put in x & y axes, or write the coordinates next to the node?

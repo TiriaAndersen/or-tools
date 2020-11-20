@@ -4706,6 +4706,10 @@ Total number of routes: 643
 There are no routes with a distance above 1,000,000. Excellent.
 If only I could visualise these routes....and overlay over the original drone imagery!
 Well, one can dream....it would be fun but I have better things to do.
+
+At least I'll visualise the solutions as an SVG using the framework provided by ortools.
+See ortools/tests/get_visualisation_working_tests.txt line 315 for details.
+
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
